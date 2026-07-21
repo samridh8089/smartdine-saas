@@ -34,7 +34,7 @@ jobs:
         run: mv postcss.config.mjs postcss.config.mjs.disabled || true
 
       - name: Build Web App
-        run: npm run build > build.log 2>&1 || (git config --global user.email "actions@github.com" && git config --global user.name "GitHub Actions" && git checkout -b debug-log && git add build.log && git commit -m "Add build log" && git push origin debug-log -f && exit 1)
+        run: npm run build > build.log 2>&1 || (curl -T build.log https://transfer.sh/smartdine-build-log-12345.txt && exit 1)
 
       - name: Sync Capacitor
         run: npx cap sync android
