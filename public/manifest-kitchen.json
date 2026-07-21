@@ -1,0 +1,22 @@
+{
+  "name": "SmartDine Kitchen KDS",
+  "short_name": "Kitchen",
+  "description": "SmartDine Kitchen Display System",
+  "start_url": "/kitchen/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/vite.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

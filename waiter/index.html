@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Waiter App | SmartDine Lite</title>
+  <link rel="manifest" href="/manifest-waiter.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="stylesheet" href="/src/styles/main.css" />
+  <link rel="stylesheet" href="/src/styles/glassmorphism.css" />
+  <style>
+    .list-item {
+      background: var(--card-bg);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid var(--border-color);
+    }
+    .list-item.urgent { border-color: var(--danger); box-shadow: 0 0 10px rgba(239,68,68,0.2); }
+    .list-item.ready { border-color: var(--success); box-shadow: 0 0 10px rgba(16,185,129,0.2); }
+  </style>
+</head>
+<body>
+  <div class="glass-nav" style="padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+    <h2 style="margin:0;">Waiter Station</h2>
+    <button class="btn-danger hidden" id="logoutBtn" onclick="logout()" style="padding: 0.5rem 1rem;">Logout</button>
+  </div>
+
+  <div id="loginForm" class="app-layout" style="align-items:center; justify-content:center; min-height: 100vh; padding:1rem;">
+    <div class="glass-card" style="width: 100%; max-width: 400px; text-align:center;">
+      <h2 class="mb-1" style="font-size:1.8rem; font-weight:700;">Waiter Station</h2>
+      <p class="text-secondary mb-4">Log in to receive table alerts</p>
+      <input type="text" id="wRid" placeholder="Restaurant ID" />
+      <input type="password" id="wPass" placeholder="Password (waiter123)" />
+      <button class="btn-primary mt-2" style="width: 100%; padding: 1rem;" onclick="login()">Access Station</button>
+      <p id="loginMsg" class="mt-2" style="color:var(--danger); font-size:0.9rem;"></p>
+    </div>
+  </div>
+
+  <div id="startOverlay" class="modal-overlay hidden" style="z-index: 2000; flex-direction: column; background: rgba(11,17,32,0.9); display:flex; align-items:center; justify-content:center; position:fixed; top:0; left:0; right:0; bottom:0;">
+    <div class="glass-card text-center slide-in-right" style="margin:1rem;">
+      <h2 class="mb-2">System Ready</h2>
+      <p class="mb-4 text-secondary">Tap below to enable audio alerts for new requests.</p>
+      <button class="btn-primary" style="padding: 1rem 2rem; font-size:1.1rem; width:100%;" onclick="startDisplay()">
+        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+        Enable Audio & Start
+      </button>
+    </div>
+  </div>
+
+  <div id="mainDisplay" class="hidden" style="flex:1; display:flex; flex-direction:column; min-height:100vh;">
+    <header class="topbar" style="background: var(--bg-card); border-bottom: 1px solid var(--border-color); padding: 0 1rem; position:sticky; top:0; z-index:50;">
+      <div class="flex items-center gap-2">
+        <h2 style="margin:0; font-size:1.2rem;">Waiter App</h2>
+        <div id="loading" class="loader hidden" style="width:16px; height:16px; border-width:2px;"></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div style="background:rgba(255,255,255,0.1); padding:0.25rem 0.75rem; border-radius:99px; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
+          Alerts: <span id="alertCount" style="color:var(--accent-primary);">0</span>
+        </div>
+        <button id="logoutBtn" onclick="logout()" style="background:none; color:var(--text-secondary); padding:0.5rem;">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <div style="padding: 1rem; flex:1; max-width: 600px; margin: 0 auto; width: 100%;">
+      <div id="alertsContainer" style="display:flex; flex-direction:column; gap:1rem;"></div>
+    </div>
+  </div>
+
+  <audio id="bellSound" src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" preload="auto"></audio>
+
+  <script type="module">
+    import { gasRequest, startPolling } from '/src/api/gas.js';
+
+    let rid = localStorage.getItem("waiter_rid");
+    const bell = document.getElementById('bellSound');
+    let knownAlerts = new Set();
+
+    if (rid) {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('startOverlay').classList.remove('hidden');
+    }
+
+    window.startDisplay = () => {
+      document.getElementById('startOverlay').classList.add('hidden');
+      bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
+      showMain();
+    };
+
+    window.login = async () => {
+      const r = document.getElementById('wRid').value;
+      const p = document.getElementById('wPass').value;
+      const btn = document.querySelector('#loginForm button');
+      btn.innerText = "Loading...";
+      
+      const res = await gasRequest("loginStaff", { restaurantId: r, username: "waiter", password: p });
+      if (res.success && res.role === "Waiter") {
+        localStorage.setItem("waiter_rid", r);
+        rid = r;
+        bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
+        showMain();
+      } else {
+        document.getElementById('loginMsg').innerText = "Invalid credentials";
+        btn.innerText = "Login";
+      }
+    };
+
+    window.logout = () => {
+      localStorage.removeItem("waiter_rid");
+      window.location.reload();
+    };
+
+    function showMain() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('mainDisplay').classList.remove('hidden');
+      startPolling(fetchAlerts, 2000);
+    }
+
+    async function fetchAlerts() {
+      if(!rid) return;
+      document.getElementById('loading').classList.remove('hidden');
+      const [callsRes, ordersRes] = await Promise.all([
+        gasRequest("getWaiterCalls", { restaurantId: rid }),
+        gasRequest("getOrders", { restaurantId: rid, status: "All" })
+      ]);
+      document.getElementById('loading').classList.add('hidden');
+      
+      let alerts = [];
+      if(callsRes.success) alerts = alerts.concat(callsRes.data.map(c => ({...c, alertType: 'Call'})));
+      
+      if(ordersRes.success) {
+        const activeOrders = ordersRes.data.filter(o => o.Status === "Ready" || o.Status === "Preparing");
+        alerts = alerts.concat(activeOrders.map(o => ({...o, alertType: 'Order'})));
+      }
+
+      renderAlerts(alerts);
+      checkBell(alerts);
+    }
+
+    function checkBell(alerts) {
+      const currentIds = alerts.map(a => a.CallID || a.OrderID);
+      const hasNew = currentIds.some(id => !knownAlerts.has(id));
+      
+      if(hasNew) {
+        currentIds.forEach(id => knownAlerts.add(id));
+        bell.play().catch(e => {}); 
+      }
+      
+      knownAlerts.forEach(id => {
+        if(!currentIds.includes(id)) knownAlerts.delete(id);
+      });
+    }
+
+    function renderAlerts(alerts) {
+      const container = document.getElementById('alertsContainer');
+      document.getElementById('alertCount').innerText = alerts.length;
+
+      if(alerts.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding: 4rem 1rem; opacity:0.5;">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; display:block;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"></path></svg>
+            <p style="font-size:1.1rem;">All caught up!</p>
+            <p style="font-size:0.9rem;">No active requests right now.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = alerts.map(a => {
+        if(a.alertType === 'Call') {
+          let isBill = a.Type === 'Bill';
+          return `
+            <div class="glass-card slide-in-right" style="padding:1rem; border-left: 4px solid ${isBill ? 'var(--danger)' : 'var(--warning)'}; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h3 style="margin:0; font-size:1.3rem;">Table ${a.TableNo}</h3>
+                <p class="text-secondary" style="font-size:0.9rem; margin-top:0.25rem;">
+                  <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${isBill ? 'var(--danger)' : 'var(--warning)'}; margin-right:4px;"></span>
+                  ${isBill ? 'Requested the Bill' : 'Needs a Waiter'}
+                </p>
+              </div>
+              <button class="btn-primary" style="background:${isBill ? 'var(--danger)' : 'var(--warning)'}; padding: 0.75rem 1.25rem;" onclick="resolveCall('${a.CallID}')">
+                Done
+              </button>
+            </div>
+          `;
+        } else {
+          if (a.Status === "Preparing") {
+            return `
+              <div class="glass-card slide-in-right" style="padding:1rem; border-left: 4px solid var(--accent-primary); opacity:0.7;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <h3 style="margin:0; font-size:1.3rem;">Table ${a.TableNo}</h3>
+                    <p class="text-secondary" style="font-size:0.9rem; margin-top:0.25rem;">Kitchen is Preparing</p>
+                  </div>
+                  <span class="badge badge-cooking" style="background:transparent;">Wait</span>
+                </div>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="glass-card slide-in-right" style="padding:1rem; border-left: 4px solid var(--success); display:flex; justify-content:space-between; align-items:center; background: linear-gradient(90deg, rgba(16,185,129,0.1) 0%, transparent 100%);">
+                <div>
+                  <h3 style="margin:0; font-size:1.3rem; color:var(--success);">Table ${a.TableNo}</h3>
+                  <p class="text-secondary" style="font-size:0.9rem; margin-top:0.25rem;">Food is Ready</p>
+                </div>
+                <button class="btn-success" style="padding: 0.75rem 1.25rem;" onclick="deliverOrder('${a.OrderID}')">
+                  Deliver
+                </button>
+              </div>
+            `;
+          }
+        }
+      }).join('');
+    }
+
+    window.resolveCall = async (callId) => {
+      await gasRequest("updateWaiterCall", { restaurantId: rid, callId: callId, status: "Resolved" });
+      fetchAlerts();
+    };
+
+    window.deliverOrder = async (orderId) => {
+      await gasRequest("updateOrder", { restaurantId: rid, orderId: orderId, status: "Delivered" });
+      fetchAlerts();
+    };
+  </script>
+</body>
+</html>

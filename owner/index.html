@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Owner Dashboard | SmartDine Lite</title>
+  <link rel="manifest" href="/manifest-owner.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="stylesheet" href="/src/styles/main.css" />
+  <link rel="stylesheet" href="/src/styles/glassmorphism.css" />
+  <style>
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+    .stat-card { background: var(--card-bg); padding: 1.5rem; border-radius: 1rem; border: 1px solid var(--border-color); text-align: center; }
+    .stat-card h2 { font-size: 2.5rem; margin: 1rem 0; color: var(--accent-primary); }
+    .toast { position: fixed; top: 2rem; left: 50%; transform: translateX(-50%) translateY(-150%); background: var(--success); color: white; padding: 1rem 2rem; border-radius: 99px; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 9999; transition: transform 0.3s ease; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--danger); }
+  </style>
+</head>
+<body>
+  <div id="loginForm" class="app-layout" style="align-items:center; justify-content:center;">
+    <div class="glass-card" style="width: 100%; max-width: 420px; text-align:center;">
+      <h2 class="mb-1" style="font-size:1.8rem; font-weight:700;">Owner Login</h2>
+      <p class="text-secondary mb-4">Access your SmartDine dashboard</p>
+      <input type="text" id="oRid" placeholder="Restaurant ID" />
+      <input type="text" id="oUser" placeholder="Username (e.g. owner_restname)" />
+      <input type="password" id="oPass" placeholder="Password" />
+      <button class="btn-primary mt-2" style="width: 100%; padding: 1rem;" onclick="login()">Sign In</button>
+      <p id="loginMsg" class="mt-2" style="color:var(--danger); font-size:0.9rem;"></p>
+    </div>
+  </div>
+
+  <div id="mainDisplay" class="app-layout hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-color);">
+        <h2 style="color:var(--text-primary); font-size: 1.2rem; font-weight: 700; margin:0;">SmartDine<span style="color:var(--accent-primary)">Lite</span></h2>
+        <p class="text-secondary" style="font-size: 0.8rem; margin-top:0.25rem;">Owner Dashboard</p>
+      </div>
+      <nav style="padding: 1.5rem 1rem; display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; flex:1;">
+        <button class="btn-sidebar active" onclick="switchTab('dashboard', this)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+          Dashboard
+        </button>
+        <button class="btn-sidebar" onclick="switchTab('orders', this)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+          Live Orders
+        </button>
+        <button class="btn-sidebar" onclick="switchTab('categories', this)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          Categories
+        </button>
+        <button class="btn-sidebar" onclick="switchTab('menu', this)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+          Menu Management
+        </button>
+        <button class="btn-sidebar" onclick="switchTab('tables', this)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          Tables
+        </button>
+        <button class="btn-sidebar" onclick="switchTab('staff', this)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+          Staff Management
+        </button>
+        <button class="btn-sidebar" onclick="switchTab('qr', this)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+          QR Codes
+        </button>
+        <button class="btn-sidebar" onclick="switchTab('analytics', this)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          Analytics
+        </button>
+        <button class="btn-sidebar" onclick="switchTab('settings', this)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          Settings
+        </button>
+      </nav>
+      <div style="padding: 1.5rem 1rem;">
+        <button id="logoutBtn" class="btn-sidebar hidden" onclick="logout()" style="color:var(--danger)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+          Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Area -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="flex items-center gap-4">
+          <button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('mobile-open')">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+          <h2 id="pageTitle" style="margin:0; font-size: 1.25rem;">Dashboard</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <div id="loading" class="loader hidden"></div>
+          <span class="badge badge-ready">Online</span>
+        </div>
+      </header>
+
+      <div class="container fade-in" style="flex:1; overflow-y:auto; padding: 2rem;">
+        <!-- Dashboard Tab -->
+        <div id="tab-dashboard" class="view-section active">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+            <h2 style="font-size:1.8rem; margin:0;">Overview</h2>
+          </div>
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+            <div class="glass-card">
+              <div class="flex justify-between items-center mb-1">
+                <p class="text-secondary" style="font-size:0.9rem; font-weight:600; text-transform:uppercase;">Today's Sales</p>
+                <div style="padding:0.5rem; background:rgba(16,185,129,0.1); border-radius:0.5rem; color:var(--success);">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+              </div>
+              <h2 id="todaySales" style="font-size: 2.5rem; margin: 0; color: var(--text-primary);">₹0.00</h2>
+              <p class="text-secondary mt-2" style="font-size:0.85rem;"><span style="color:var(--success)">+14.5%</span> from yesterday</p>
+            </div>
+            
+            <div class="glass-card">
+              <div class="flex justify-between items-center mb-1">
+                <p class="text-secondary" style="font-size:0.9rem; font-weight:600; text-transform:uppercase;">Orders Today</p>
+                <div style="padding:0.5rem; background:rgba(59,130,246,0.1); border-radius:0.5rem; color:var(--accent-primary);">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                </div>
+              </div>
+              <h2 id="todayOrders" style="font-size: 2.5rem; margin: 0; color: var(--text-primary);">0</h2>
+            </div>
+            
+            <div class="glass-card">
+              <div class="flex justify-between items-center mb-1">
+                <p class="text-secondary" style="font-size:0.9rem; font-weight:600; text-transform:uppercase;">Pending Orders</p>
+                <div style="padding:0.5rem; background:rgba(245,158,11,0.1); border-radius:0.5rem; color:var(--warning);">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+              </div>
+              <h2 id="pendingOrders" style="font-size: 2.5rem; margin: 0; color: var(--text-primary);">0</h2>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="tab-orders" class="view-section hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 style="font-size:1.8rem; margin:0;">Live Orders</h2>
+          </div>
+          <div class="glass-card" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Table</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="ordersList">
+                <tr><td colspan="5" class="text-center text-secondary">Loading orders...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Menu Tab -->
+        <div id="tab-menu" class="view-section hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 style="font-size:1.8rem; margin:0;">Menu Items</h2>
+            <button class="btn-primary" onclick="showAddItem()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+              Add Item
+            </button>
+          </div>
+          <div class="glass-card" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Item Name</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="menuList">
+                <tr><td colspan="4" class="text-center text-secondary">Loading menu...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Staff Tab -->
+        <div id="tab-staff" class="view-section hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 style="font-size:1.8rem; margin:0;">Staff Management</h2>
+            <button class="btn-primary" onclick="showAddStaff()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+              Create Staff
+            </button>
+          </div>
+          <div class="glass-card" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Username</th>
+                  <th>Status</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="staffList">
+                <tr><td colspan="5" class="text-center text-secondary">Loading staff...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- QR Tab -->
+        <div id="tab-qr" class="view-section hidden">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+            <h2 style="font-size:1.8rem; margin:0;">QR Codes</h2>
+          </div>
+          <div class="grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="glass-card">
+              <h3 class="mb-2">Generate Smart QR</h3>
+              <p class="text-secondary mb-4">Enter table number to instantly provision a customer ordering link.</p>
+              <div style="display:flex; gap:10px;">
+                <input type="number" id="qrTable" placeholder="e.g. 5" style="margin:0; height: 48px;" />
+                <button class="btn-primary" style="height: 48px; white-space:nowrap;" onclick="generateQR()">Generate Link</button>
+              </div>
+            </div>
+            <div id="qrResult" class="glass-card hidden text-center fade-in" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+              <h4 style="font-size:1.2rem; color:var(--accent-primary);">Table <span id="qrResultTable"></span> Ready</h4>
+              <p class="mt-2 text-secondary text-sm">Customer URL:</p>
+              <a id="qrLink" href="#" target="_blank" style="word-break: break-all; margin:0.5rem 0; font-weight:600; text-decoration:underline;"></a>
+              <p class="text-secondary mt-2 text-sm">Download as PNG or convert to QR code externally.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categories Tab -->
+        <div id="tab-categories" class="view-section hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 style="font-size:1.8rem; margin:0;">Categories Management</h2>
+            <button class="btn-primary" onclick="showAddCategory()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+              Add Category
+            </button>
+          </div>
+          <div class="glass-card" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Category Name</th>
+                  <th>Status</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="categoryList">
+                <tr><td colspan="3" class="text-center text-secondary">Loading categories...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tables Tab -->
+        <div id="tab-tables" class="view-section hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 style="font-size:1.8rem; margin:0;">Tables Management</h2>
+            <button class="btn-primary" onclick="showAddTable()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+              Add Table
+            </button>
+          </div>
+          <div class="glass-card" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Table No</th>
+                  <th>QR Code URL</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tableList">
+                <tr><td colspan="3" class="text-center text-secondary">Loading tables...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="tab-analytics" class="view-section hidden">
+          <h2 style="font-size:1.8rem; margin:0; margin-bottom:2rem;">Analytics & Reports</h2>
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="glass-card text-center">
+              <p class="text-secondary text-sm font-bold" style="text-transform:uppercase;">Daily Sales</p>
+              <h3 id="aDailySales" style="font-size:2rem; color:var(--success); margin:0.5rem 0;">₹0</h3>
+            </div>
+            <div class="glass-card text-center">
+              <p class="text-secondary text-sm font-bold" style="text-transform:uppercase;">Weekly Sales</p>
+              <h3 id="aWeeklySales" style="font-size:2rem; color:var(--accent-primary); margin:0.5rem 0;">₹0</h3>
+            </div>
+            <div class="glass-card text-center">
+              <p class="text-secondary text-sm font-bold" style="text-transform:uppercase;">Monthly Sales</p>
+              <h3 id="aMonthlySales" style="font-size:2rem; color:var(--warning); margin:0.5rem 0;">₹0</h3>
+            </div>
+            <div class="glass-card text-center">
+              <p class="text-secondary text-sm font-bold" style="text-transform:uppercase;">Total Orders</p>
+              <h3 id="aTotalOrders" style="font-size:2rem; color:var(--text-primary); margin:0.5rem 0;">0</h3>
+            </div>
+          </div>
+          <div class="glass-card">
+            <h3 style="margin-bottom:1rem;">Best Selling Items</h3>
+            <ul id="aBestSelling" style="list-style:none; padding:0; margin:0;">
+              <li class="text-secondary">Loading analytics...</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="tab-settings" class="view-section hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 style="font-size:1.8rem; margin:0;">Restaurant Settings</h2>
+            <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+          </div>
+          <div class="glass-card">
+            <div style="display:flex; flex-direction:column; gap:1rem; max-width:500px;">
+              <div>
+                <label class="text-secondary text-sm">Restaurant Name</label>
+                <input type="text" id="setRestName" placeholder="Name" />
+              </div>
+              <div>
+                <label class="text-secondary text-sm">Phone Number</label>
+                <input type="text" id="setPhone" placeholder="Phone" />
+              </div>
+              <div>
+                <label class="text-secondary text-sm">Address</label>
+                <textarea id="setAddress" placeholder="Address" rows="3" style="resize:none; margin-bottom:0.5rem; width:100%; padding:0.75rem; border-radius:8px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color);"></textarea>
+              </div>
+              <div>
+                <label class="text-secondary text-sm">Tax / GST %</label>
+                <input type="number" id="setGst" placeholder="0" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Category Modal -->
+  <div id="addCategoryModal" class="modal-overlay hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(11,17,32,0.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:2000;">
+    <div class="glass-card slide-in-right" style="width: 100%; max-width: 400px; margin: 1rem;">
+      <h2 style="margin:0; margin-bottom:1rem;">Category</h2>
+      <input type="hidden" id="catId" />
+      <input type="text" id="catName" placeholder="Category Name" />
+      <select id="catStatus" style="margin-bottom:1rem; width:100%; padding:0.75rem; border-radius:8px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color);">
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+      <div class="flex gap-2 mt-2">
+        <button class="btn-primary" style="flex:2;" onclick="saveCategory()">Save</button>
+        <button class="btn-danger" style="flex:1;" onclick="hideAddCategory()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Table Modal -->
+  <div id="addTableModal" class="modal-overlay hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(11,17,32,0.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:2000;">
+    <div class="glass-card slide-in-right" style="width: 100%; max-width: 400px; margin: 1rem;">
+      <h2 style="margin:0; margin-bottom:1rem;">Table</h2>
+      <input type="text" id="tblNo" placeholder="Table Number" />
+      <div class="flex gap-2 mt-2">
+        <button class="btn-primary" style="flex:2;" onclick="saveTable()">Save</button>
+        <button class="btn-danger" style="flex:1;" onclick="hideAddTable()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Menu Modal -->
+  <div id="addItemModal" class="modal-overlay hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(11,17,32,0.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:2000;">
+    <div class="glass-card slide-in-right" style="width: 100%; max-width: 500px; margin: 1rem; border: 1px solid rgba(255,255,255,0.15);">
+      <div class="flex justify-between items-center mb-4">
+        <h2 style="margin:0;">Add Menu Item</h2>
+        <button onclick="hideAddItem()" style="background:none; color:var(--text-secondary); padding:0.5rem;">
+          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <input type="text" id="mCat" placeholder="Category (e.g. Main Course)" />
+      <input type="text" id="mName" placeholder="Item Name" />
+      <textarea id="mDesc" placeholder="Description (ingredients, size)" rows="3" style="resize:none;"></textarea>
+      <input type="number" step="0.01" id="mPrice" placeholder="Price (₹)" />
+      <input type="text" id="mImg" placeholder="Image URL (optional)" />
+      
+      <div class="flex gap-2 mt-2">
+        <button class="btn-primary" style="flex:2;" onclick="saveMenuItem()">Save Item</button>
+        <button class="btn-danger" style="flex:1;" onclick="hideAddItem()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Staff Modal -->
+  <div id="addStaffModal" class="modal-overlay hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(11,17,32,0.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:2000;">
+    <div class="glass-card slide-in-right" style="width: 100%; max-width: 500px; margin: 1rem; border: 1px solid rgba(255,255,255,0.15);">
+      <div class="flex justify-between items-center mb-4">
+        <h2 style="margin:0;">Add / Edit Staff</h2>
+        <button onclick="hideAddStaff()" style="background:none; color:var(--text-secondary); padding:0.5rem;">
+          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <input type="hidden" id="sId" />
+      <input type="text" id="sName" placeholder="Full Name" />
+      <select id="sRole" style="margin-bottom:1rem; width:100%; padding:0.75rem; border-radius:8px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color);">
+        <option value="Manager">Manager</option>
+        <option value="Kitchen">Kitchen</option>
+        <option value="Waiter">Waiter</option>
+      </select>
+      <input type="text" id="sUser" placeholder="Username" />
+      <input type="password" id="sPass" placeholder="Password" />
+      
+      <div class="flex gap-2 mt-2">
+        <button class="btn-primary" style="flex:2;" onclick="saveStaff()">Save Staff</button>
+        <button class="btn-danger" style="flex:1;" onclick="hideAddStaff()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Success</div>
+
+  <script type="module">
+    import { gasRequest, startPolling, stopPolling } from '/src/api/gas.js';
+
+    let rid = localStorage.getItem("owner_rid");
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramRid = urlParams.get('rid');
+
+    if(paramRid) {
+      document.getElementById('oRid').value = paramRid;
+    }
+
+    if (rid) {
+      showMain();
+    }
+
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      if (isError) t.classList.add('error');
+      else t.classList.remove('error');
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    window.login = async () => {
+      const r = document.getElementById('oRid').value;
+      const u = document.getElementById('oUser').value;
+      const p = document.getElementById('oPass').value;
+      const btn = document.querySelector('#loginForm button');
+      btn.innerText = "Loading...";
+      
+      const res = await gasRequest("loginStaff", { restaurantId: r, username: u, password: p });
+      if (res.success && res.role === "Owner") {
+        localStorage.setItem("owner_rid", r);
+        rid = r;
+        showMain();
+      } else {
+        document.getElementById('loginMsg').innerText = res.message || "Invalid credentials";
+        btn.innerText = "Sign In";
+      }
+    };
+
+    window.logout = () => {
+      localStorage.removeItem("owner_rid");
+      window.location.reload();
+    };
+
+    function showMain() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('mainDisplay').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.remove('hidden');
+      loadDashboard();
+      startPolling(loadDashboard, 10000); 
+    }
+
+    window.switchTab = (tabId, btn) => {
+      document.querySelectorAll('.btn-sidebar').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.view-section').forEach(s => s.classList.add('hidden'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+      const titles = {
+        'dashboard': 'Dashboard',
+        'orders': 'Live Orders',
+        'categories': 'Categories',
+        'menu': 'Menu Management',
+        'tables': 'Tables',
+        'staff': 'Staff Management',
+        'qr': 'QR Codes',
+        'analytics': 'Analytics',
+        'settings': 'Settings'
+      };
+      document.getElementById('pageTitle').innerText = titles[tabId] || 'Dashboard';
+
+      if(tabId === 'menu') loadMenu();
+      if(tabId === 'staff') loadStaff();
+      if(tabId === 'categories') loadCategories();
+      if(tabId === 'tables') loadTables();
+      if(tabId === 'settings') loadSettings();
+      if(tabId === 'analytics') loadAnalytics();
+    };
+
+    async function loadDashboard() {
+      if(!rid) return;
+      const res = await gasRequest("getOrders", { restaurantId: rid, status: "All" });
+      if(res.success && res.data) {
+        const today = new Date().toISOString().split('T')[0];
+        let sales = 0;
+        let count = 0;
+        let pending = 0;
+
+        const tbody = document.getElementById('ordersList');
+        let rows = '';
+
+        res.data.forEach(o => {
+          if(o.Status === "Pending" || o.Status === "Preparing") pending++;
+          if(o.Timestamp && o.Timestamp.startsWith(today)) {
+            count++;
+            sales += parseFloat(o.Total || 0);
+          }
+          
+          let badge = 'badge-ready';
+          if(o.Status === 'Pending') badge = 'badge-pending';
+          else if(o.Status === 'Preparing') badge = 'badge-cooking';
+
+          rows += `
+            <tr>
+              <td>#${o.OrderID}</td>
+              <td>Table ${o.TableNo}</td>
+              <td><span class="badge ${badge}">${o.Status}</span></td>
+              <td>₹${parseFloat(o.Total).toFixed(2)}</td>
+              <td class="text-secondary">${new Date(o.Timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+            </tr>
+          `;
+        });
+
+        document.getElementById('todaySales').innerText = '₹' + sales.toFixed(2);
+        document.getElementById('todayOrders').innerText = count;
+        document.getElementById('pendingOrders').innerText = pending;
+        
+        if (res.data.length === 0) rows = '<tr><td colspan="5" class="text-center text-secondary">No orders today.</td></tr>';
+        tbody.innerHTML = rows;
+      }
+    }
+
+    async function loadMenu() {
+      const cacheKey = `owner_menu_${rid}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const data = JSON.parse(cached);
+        if (Date.now() - data.timestamp < 60000) {
+          processMenuResponse(data.res);
+          return;
+        }
+      }
+
+      const res = await gasRequest("getMenu", { restaurantId: rid });
+      if(res.success) {
+        sessionStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), res }));
+        processMenuResponse(res);
+      } else {
+        document.getElementById('menuList').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to load menu</td></tr>';
+      }
+    }
+
+    function processMenuResponse(res) {
+      const container = document.getElementById('menuList');
+      if (res.menu.length === 0) {
+        container.innerHTML = '<tr><td colspan="4" class="text-center text-secondary">No items found.</td></tr>';
+        return;
+      }
+      container.innerHTML = res.menu.map(m => `
+        <tr class="fade-in">
+          <td style="font-weight:600;">${m.Name}</td>
+          <td><span class="badge" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);">${m.Category}</span></td>
+          <td style="color:var(--success); font-weight:600;">₹${parseFloat(m.Price).toFixed(2)}</td>
+          <td style="text-align:right">
+            <button onclick="deleteMenu('${m.ID}')" style="background:none; color:var(--danger); padding:0.5rem;">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    window.showAddItem = () => document.getElementById('addItemModal').classList.remove('hidden');
+    window.hideAddItem = () => document.getElementById('addItemModal').classList.add('hidden');
+
+    window.saveMenuItem = async () => {
+      const item = {
+        Category: document.getElementById('mCat').value,
+        Name: document.getElementById('mName').value,
+        Description: document.getElementById('mDesc').value,
+        Price: document.getElementById('mPrice').value,
+        ImageURL: document.getElementById('mImg').value,
+        Available: true
+      };
+      
+      const btn = document.querySelector('#addItemModal .btn-primary');
+      btn.innerText = "Saving...";
+      
+      const res = await gasRequest("updateMenu", { restaurantId: rid, actionType: "add", item: item });
+      if (res.success) {
+        showToast("Item saved!");
+        sessionStorage.removeItem(`owner_menu_${rid}`);
+        sessionStorage.removeItem(`menu_${rid}`); // clear customer cache too
+        hideAddItem();
+        loadMenu();
+        document.querySelectorAll('#addItemModal input, #addItemModal textarea').forEach(i => i.value = '');
+      } else {
+        showToast("Error saving item", true);
+      }
+      btn.innerText = "Save Item";
+    };
+
+    window.deleteMenu = async (id) => {
+      if(confirm("Delete this item?")) {
+        const res = await gasRequest("updateMenu", { restaurantId: rid, actionType: "delete", item: { ID: id } });
+        if(res.success) {
+          showToast("Item deleted!");
+          sessionStorage.removeItem(`owner_menu_${rid}`);
+          sessionStorage.removeItem(`menu_${rid}`);
+          loadMenu();
+        }
+      }
+    };
+
+    async function loadStaff() {
+      const res = await gasRequest("getStaff", { restaurantId: rid });
+      const tbody = document.getElementById('staffList');
+      if (res.success && res.data) {
+        if (res.data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">No staff members found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = res.data.map(s => `
+          <tr class="fade-in">
+            <td style="font-weight:600;">${s.Name}</td>
+            <td><span class="badge" style="background:rgba(255,255,255,0.1);">${s.Role}</span></td>
+            <td>${s.Username}</td>
+            <td><span class="badge ${s.Status === 'Active' ? 'badge-ready' : 'badge-pending'}">${s.Status || 'Active'}</span></td>
+            <td style="text-align:right">
+              <button onclick="editStaff('${s.StaffID}', '${s.Name}', '${s.Role}', '${s.Username}')" style="background:none; color:var(--text-secondary); padding:0.5rem;">
+                Edit
+              </button>
+              <button onclick="deleteStaff('${s.StaffID}')" style="background:none; color:var(--danger); padding:0.5rem;">
+                Delete
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load staff or API not yet implemented on backend.</td></tr>';
+      }
+    }
+
+    window.showAddStaff = () => {
+      document.getElementById('sId').value = '';
+      document.getElementById('sName').value = '';
+      document.getElementById('sUser').value = '';
+      document.getElementById('sPass').value = '';
+      document.getElementById('addStaffModal').classList.remove('hidden');
+    };
+    
+    window.hideAddStaff = () => document.getElementById('addStaffModal').classList.add('hidden');
+
+    window.editStaff = (id, name, role, username) => {
+      document.getElementById('sId').value = id;
+      document.getElementById('sName').value = name;
+      document.getElementById('sRole').value = role;
+      document.getElementById('sUser').value = username;
+      document.getElementById('sPass').value = ''; // require new password or leave blank to keep old (depends on backend)
+      document.getElementById('addStaffModal').classList.remove('hidden');
+    };
+
+    window.saveStaff = async () => {
+      const btn = document.querySelector('#addStaffModal .btn-primary');
+      btn.innerText = "Saving...";
+      
+      const payload = {
+        restaurantId: rid,
+        actionType: document.getElementById('sId').value ? "edit" : "add",
+        staff: {
+          StaffID: document.getElementById('sId').value || undefined,
+          Name: document.getElementById('sName').value,
+          Role: document.getElementById('sRole').value,
+          Username: document.getElementById('sUser').value,
+          Password: document.getElementById('sPass').value,
+          Status: 'Active'
+        }
+      };
+
+      const res = await gasRequest("updateStaff", payload);
+      if (res.success) {
+        showToast("Staff saved!");
+        hideAddStaff();
+        loadStaff();
+      } else {
+        showToast(res.message || "Error saving staff", true);
+      }
+      btn.innerText = "Save Staff";
+    };
+
+    window.deleteStaff = async (id) => {
+      if(confirm("Delete this staff member?")) {
+        const res = await gasRequest("updateStaff", { restaurantId: rid, actionType: "delete", staff: { StaffID: id } });
+        if(res.success) {
+          showToast("Staff deleted!");
+          loadStaff();
+        } else {
+          showToast("Error deleting staff", true);
+        }
+      }
+    };
+
+    window.generateQR = async () => {
+      const table = document.getElementById('qrTable').value;
+      if(!table) return;
+      const base = window.location.origin;
+      const url = `${base}/customer/?restaurantId=${rid}&tableNo=${table}`;
+      
+      document.getElementById('qrResult').classList.remove('hidden');
+      document.getElementById('qrResultTable').innerText = table;
+      document.getElementById('qrLink').innerText = url;
+      document.getElementById('qrLink').href = url;
+      
+      // Auto-save the table to the Tables sheet if generated from here
+      await gasRequest("updateTable", { 
+        restaurantId: rid, 
+        actionType: "add", 
+        table: { TableNo: table, QRLink: url } 
+      });
+    };
+
+    // --- Categories Management ---
+    async function loadCategories() {
+      const res = await gasRequest("getCategories", { restaurantId: rid });
+      const tbody = document.getElementById('categoryList');
+      if (res.success && res.data) {
+        if (res.data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" class="text-center text-secondary">No categories found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = res.data.map(c => `
+          <tr class="fade-in">
+            <td style="font-weight:600;">${c.Name}</td>
+            <td><span class="badge ${c.Active ? 'badge-ready' : 'badge-pending'}">${c.Active ? 'Active' : 'Inactive'}</span></td>
+            <td style="text-align:right">
+              <button onclick="editCategory('${c.ID}', '${c.Name}', ${c.Active})" style="background:none; color:var(--text-secondary); padding:0.5rem;">Edit</button>
+              <button onclick="deleteCategory('${c.ID}')" style="background:none; color:var(--danger); padding:0.5rem;">Delete</button>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Failed to load categories.</td></tr>';
+      }
+    }
+
+    window.showAddCategory = () => {
+      document.getElementById('catId').value = '';
+      document.getElementById('catName').value = '';
+      document.getElementById('catStatus').value = 'true';
+      document.getElementById('addCategoryModal').classList.remove('hidden');
+    };
+    window.hideAddCategory = () => document.getElementById('addCategoryModal').classList.add('hidden');
+    
+    window.editCategory = (id, name, active) => {
+      document.getElementById('catId').value = id;
+      document.getElementById('catName').value = name;
+      document.getElementById('catStatus').value = active;
+      document.getElementById('addCategoryModal').classList.remove('hidden');
+    };
+
+    window.saveCategory = async () => {
+      const payload = {
+        restaurantId: rid,
+        actionType: document.getElementById('catId').value ? "edit" : "add",
+        category: {
+          ID: document.getElementById('catId').value || undefined,
+          Name: document.getElementById('catName').value,
+          Active: document.getElementById('catStatus').value === 'true'
+        }
+      };
+      const res = await gasRequest("updateCategory", payload);
+      if (res.success) { showToast("Category saved!"); hideAddCategory(); loadCategories(); }
+      else { showToast(res.message, true); }
+    };
+
+    window.deleteCategory = async (id) => {
+      if(confirm("Delete this category?")) {
+        const res = await gasRequest("updateCategory", { restaurantId: rid, actionType: "delete", category: { ID: id } });
+        if(res.success) { showToast("Category deleted!"); loadCategories(); }
+      }
+    };
+
+    // --- Tables Management ---
+    async function loadTables() {
+      const res = await gasRequest("getTables", { restaurantId: rid });
+      const tbody = document.getElementById('tableList');
+      if (res.success && res.data) {
+        if (res.data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" class="text-center text-secondary">No tables found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = res.data.map(t => `
+          <tr class="fade-in">
+            <td style="font-weight:600;">${t.TableNo}</td>
+            <td><a href="${t.QRLink}" target="_blank" style="color:var(--accent-primary);text-decoration:underline;">View QR Link</a></td>
+            <td style="text-align:right">
+              <button onclick="editTable('${t.TableNo}')" style="background:none; color:var(--text-secondary); padding:0.5rem;">Edit</button>
+              <button onclick="deleteTable('${t.TableNo}')" style="background:none; color:var(--danger); padding:0.5rem;">Delete</button>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Failed to load tables.</td></tr>';
+      }
+    }
+
+    window.showAddTable = () => {
+      document.getElementById('tblNo').value = '';
+      document.getElementById('addTableModal').classList.remove('hidden');
+    };
+    window.hideAddTable = () => document.getElementById('addTableModal').classList.add('hidden');
+    window.editTable = (tblNo) => {
+      document.getElementById('tblNo').value = tblNo;
+      document.getElementById('addTableModal').classList.remove('hidden');
+    };
+
+    window.saveTable = async () => {
+      const tableNo = document.getElementById('tblNo').value;
+      const base = window.location.origin;
+      const url = `${base}/customer/?restaurantId=${rid}&tableNo=${tableNo}`;
+      const res = await gasRequest("updateTable", {
+        restaurantId: rid,
+        actionType: "add", // or edit based on your logic, keeping simple
+        table: { TableNo: tableNo, QRLink: url }
+      });
+      if (res.success) { showToast("Table saved!"); hideAddTable(); loadTables(); }
+    };
+
+    window.deleteTable = async (tableNo) => {
+      if(confirm("Delete this table?")) {
+        const res = await gasRequest("updateTable", { restaurantId: rid, actionType: "delete", table: { TableNo: tableNo } });
+        if(res.success) { showToast("Table deleted!"); loadTables(); }
+      }
+    };
+
+    // --- Settings Management ---
+    async function loadSettings() {
+      const res = await gasRequest("getRestaurantSettings", { restaurantId: rid });
+      if (res.success && res.settings) {
+        document.getElementById('setRestName').value = res.settings.RestaurantName || '';
+        document.getElementById('setPhone').value = res.settings.Phone || '';
+        document.getElementById('setAddress').value = res.settings.Address || '';
+        document.getElementById('setGst').value = res.settings.GST || '';
+      }
+    }
+
+    window.saveSettings = async () => {
+      const settings = {
+        RestaurantName: document.getElementById('setRestName').value,
+        Phone: document.getElementById('setPhone').value,
+        Address: document.getElementById('setAddress').value,
+        GST: document.getElementById('setGst').value
+      };
+      const res = await gasRequest("updateRestaurantSettings", { restaurantId: rid, settings: settings });
+      if(res.success) showToast("Settings updated!");
+      else showToast(res.message, true);
+    };
+
+    // --- Analytics ---
+    async function loadAnalytics() {
+      const res = await gasRequest("getAnalytics", { restaurantId: rid });
+      if (res.success && res.data) {
+        document.getElementById('aDailySales').innerText = '₹' + (res.data.todaySales || 0).toFixed(2);
+        document.getElementById('aWeeklySales').innerText = '₹' + (res.data.weekSales || 0).toFixed(2);
+        document.getElementById('aMonthlySales').innerText = '₹' + (res.data.monthSales || 0).toFixed(2);
+        document.getElementById('aTotalOrders').innerText = res.data.ordersCount || 0;
+
+        const bestList = document.getElementById('aBestSelling');
+        if (!res.data.bestSelling || res.data.bestSelling.length === 0) {
+          bestList.innerHTML = '<li class="text-secondary">No items sold yet.</li>';
+        } else {
+          bestList.innerHTML = res.data.bestSelling.map(i => `
+            <li style="display:flex; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid rgba(255,255,255,0.1);">
+              <span>${i.Name}</span>
+              <span style="color:var(--success); font-weight:bold;">${i.Sold} sold</span>
+            </li>
+          `).join('');
+        }
+      }
+    }
+  </script>
+</body>
+</html>

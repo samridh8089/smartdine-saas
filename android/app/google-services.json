@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1061302968637",
+    "project_id": "smartdine-new",
+    "storage_bucket": "smartdine-new.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1061302968637:android:2881f4c5cf34026c93a554",
+        "android_client_info": {
+          "package_name": "com.smartdine.kitchen"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBo6kNedWGuZQuuDHlg2zVEHTgOem0FGcY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

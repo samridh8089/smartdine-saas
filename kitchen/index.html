@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Kitchen Display | SmartDine Lite</title>
+  <link rel="manifest" href="/manifest-kitchen.json">
+  <meta name="theme-color" content="#020617">
+  <link rel="stylesheet" href="/src/styles/main.css" />
+  <link rel="stylesheet" href="/src/styles/glassmorphism.css" />
+  <style>
+    :root {
+      --bg-color: #020617; /* Extra dark theme */
+      --card-bg: rgba(15, 23, 42, 0.9);
+    }
+    body {
+      background-color: var(--bg-color);
+      overflow-x: hidden;
+    }
+    .kds-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .filter-bar {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding: 1rem 1.5rem;
+      background: rgba(2, 6, 23, 0.9);
+      border-bottom: 1px solid var(--border-color);
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    
+    .filter-btn {
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .filter-btn.active {
+      background: var(--accent-primary);
+      color: white;
+      border-color: var(--accent-primary);
+    }
+    .filter-btn .count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.3);
+      border-radius: 1rem;
+      padding: 0.1rem 0.5rem;
+      margin-left: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .search-container {
+      display: flex;
+      padding: 0 1.5rem;
+      margin-top: 1rem;
+    }
+    .search-input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .kds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      padding: 1.5rem;
+    }
+    
+    .kds-card {
+      background: var(--card-bg);
+      border-radius: 1rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+    .kds-card.urgent-flash {
+      animation: urgent-flash 1s infinite alternate;
+      border-color: var(--warning);
+    }
+    @keyframes urgent-flash {
+      0% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
+      100% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.8); }
+    }
+
+    .card-header {
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .card-body {
+      padding: 1rem;
+      flex: 1;
+    }
+    .card-footer {
+      padding: 1rem;
+      background: rgba(0,0,0,0.2);
+    }
+    .kds-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      font-size: 1.1rem;
+      border-bottom: 1px dashed rgba(255,255,255,0.1);
+      padding-bottom: 0.5rem;
+    }
+    .kds-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .timer {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Offline Banner */
+    #offlineBanner {
+      background: var(--danger);
+      color: white;
+      text-align: center;
+      padding: 0.5rem;
+      font-weight: 600;
+      display: none;
+    }
+    
+    /* Loading Skeleton */
+    .skeleton {
+      background: rgba(255,255,255,0.05);
+      border-radius: 1rem;
+      height: 250px;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Offline Banner -->
+  <div id="offlineBanner">
+    ⚠️ You are offline. Check your connection. <button onclick="window.location.reload()" style="background:rgba(0,0,0,0.3); border:none; color:white; padding:0.25rem 0.5rem; border-radius:0.25rem; cursor:pointer; margin-left:0.5rem;">Retry</button>
+  </div>
+
+  <!-- Login Form -->
+  <div id="loginForm" class="app-layout" style="align-items:center; justify-content:center; min-height: 100vh;">
+    <div class="glass-card" style="width: 100%; max-width: 420px; text-align:center;">
+      <h2 class="mb-1" style="font-size:1.8rem; font-weight:700;">Kitchen KDS</h2>
+      <p class="text-secondary mb-4">Dedicated Kitchen PWA</p>
+      <input type="text" id="kRid" placeholder="Restaurant ID" class="mb-3" style="width:100%; padding:1rem; border-radius:0.5rem; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:white;"/>
+      <input type="password" id="kPass" placeholder="Password" class="mb-3" style="width:100%; padding:1rem; border-radius:0.5rem; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:white;"/>
+      <button class="btn-primary mt-2" style="width: 100%; padding: 1rem; font-size:1.1rem;" onclick="login()">Authenticate</button>
+      <p id="loginMsg" class="mt-2" style="color:var(--danger); font-size:0.9rem;"></p>
+    </div>
+  </div>
+
+  <!-- Audio Unlock Overlay -->
+  <div id="startOverlay" class="hidden" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(2,6,23,0.95); z-index:2000; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:2rem; text-align:center;">
+    <h2 class="mb-2" style="font-size:2rem;">Kitchen Display Ready</h2>
+    <p class="text-secondary mb-4" style="font-size:1.1rem;">Tap below to enable continuous audio notifications for new orders.</p>
+    <button class="btn-primary" style="padding: 1.5rem 3rem; font-size:1.2rem; border-radius:3rem;" onclick="startDisplay()">Launch KDS</button>
+  </div>
+
+  <!-- Main App -->
+  <div id="mainDisplay" class="hidden" style="display:flex; flex-direction:column; height:100vh;">
+    <header class="kds-header">
+      <div>
+        <h1 style="margin:0; font-size:1.5rem;">Kitchen</h1>
+      </div>
+      <div style="display:flex; align-items:center; gap:1rem;">
+        <div id="loading" class="loader hidden"></div>
+        <span class="badge badge-cooking blink" id="syncBadge">Syncing</span>
+        <button class="btn-danger" onclick="logout()" style="padding:0.5rem 1rem;">Exit</button>
+      </div>
+    </header>
+
+    <div class="filter-bar" id="filters">
+      <button class="filter-btn active" data-filter="All">All Active <span class="count" id="cAll">0</span></button>
+      <button class="filter-btn" data-filter="Pending">Pending <span class="count" id="cPending">0</span></button>
+      <button class="filter-btn" data-filter="Preparing">Preparing <span class="count" id="cPreparing">0</span></button>
+      <button class="filter-btn" data-filter="Ready">Ready <span class="count" id="cReady">0</span></button>
+      <button class="filter-btn" data-filter="Completed">Completed <span class="count" id="cCompleted">0</span></button>
+    </div>
+
+    <div class="search-container">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search by Table or Order ID..." oninput="renderGrid()">
+    </div>
+
+    <div class="kds-grid" id="orderGrid">
+      <!-- Skeletons shown initially -->
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  </div>
+
+  <audio id="bellSound" src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" preload="auto" loop></audio>
+
+  <script type="module">
+    import { gasRequest } from '/src/api/gas.js';
+    import { PushNotifications } from '@capacitor/push-notifications';
+    import { Haptics, ImpactStyle } from '@capacitor/haptics';
+
+    let rid = localStorage.getItem("kitchen_rid");
+    const bell = document.getElementById('bellSound');
+    let ordersCache = [];
+    let currentFilter = "All";
+    let isRinging = false;
+    let pollTimer = null;
+    
+    // Online/Offline Listeners
+    window.addEventListener('online', () => document.getElementById('offlineBanner').style.display = 'none');
+    window.addEventListener('offline', () => document.getElementById('offlineBanner').style.display = 'block');
+
+    if (rid) {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('startOverlay').classList.remove('hidden');
+    }
+
+    // Filter Listeners
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        currentFilter = e.currentTarget.getAttribute('data-filter');
+        renderGrid();
+      });
+    });
+
+    window.startDisplay = () => {
+      document.getElementById('startOverlay').classList.add('hidden');
+      // Unlock audio
+      bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
+      initPushNotifications();
+      showMain();
+    };
+
+    const initPushNotifications = async () => {
+      let permStatus = await PushNotifications.checkPermissions();
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
+      }
+      if (permStatus.receive !== 'granted') return;
+
+      await PushNotifications.register();
+
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('Push registration success, token: ' + token.value);
+        localStorage.setItem("fcm_token", token.value);
+        if (rid) {
+          await gasRequest("registerFcmToken", { restaurantId: rid, token: token.value, role: "Kitchen" });
+        }
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+        // Notification received in foreground
+        Haptics.vibrate();
+        if(!isRinging) {
+          bell.play().catch(()=>{});
+          isRinging = true;
+        }
+        fetchOrders();
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        // Tapped on notification in background
+        showMain();
+        fetchOrders();
+      });
+    };
+
+    window.login = async () => {
+      const r = document.getElementById('kRid').value;
+      const p = document.getElementById('kPass').value;
+      const btn = document.querySelector('#loginForm button');
+      btn.innerText = "Authenticating...";
+      
+      const res = await gasRequest("loginStaff", { restaurantId: r, username: "kitchen", password: p });
+      if (res.success && res.role === "Kitchen") {
+        localStorage.setItem("kitchen_rid", r);
+        rid = r;
+        bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
+        showMain();
+      } else {
+        document.getElementById('loginMsg').innerText = "Invalid credentials or role";
+        btn.innerText = "Authenticate";
+      }
+    };
+
+    window.logout = () => {
+      localStorage.removeItem("kitchen_rid");
+      window.location.reload();
+    };
+
+    function showMain() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('mainDisplay').classList.remove('hidden');
+      fetchOrders();
+      pollTimer = setInterval(fetchOrders, 3000); // Poll every 3 seconds
+    }
+
+    async function fetchOrders() {
+      if(!rid || !navigator.onLine) return;
+      
+      document.getElementById('syncBadge').style.opacity = '1';
+      
+      try {
+        const res = await gasRequest("getOrders", { restaurantId: rid, status: "All" });
+        if (res.success) {
+          // Sort orders: oldest Pending first, then Preparing, then Ready, then Completed
+          // We want oldest first so kitchen fulfills in order
+          ordersCache = res.data; 
+          updateCounts();
+          renderGrid();
+          checkAlarms();
+        }
+      } catch (err) {
+        console.error("Poll error", err);
+      }
+      
+      setTimeout(() => document.getElementById('syncBadge').style.opacity = '0.3', 500);
+    }
+
+    function updateCounts() {
+      let pending = 0, prep = 0, ready = 0, comp = 0;
+      ordersCache.forEach(o => {
+        if(o.Status === "Pending") pending++;
+        else if(o.Status === "Preparing") prep++;
+        else if(o.Status === "Ready") ready++;
+        else if(o.Status === "Completed") comp++;
+      });
+      document.getElementById('cAll').innerText = pending + prep + ready; // active only
+      document.getElementById('cPending').innerText = pending;
+      document.getElementById('cPreparing').innerText = prep;
+      document.getElementById('cReady').innerText = ready;
+      document.getElementById('cCompleted').innerText = comp;
+    }
+
+    function checkAlarms() {
+      // Alarm condition: Any "Pending" order exists
+      const hasPending = ordersCache.some(o => o.Status === "Pending");
+      
+      if (hasPending && !isRinging) {
+        bell.play().catch(()=>{});
+        isRinging = true;
+      } else if (!hasPending && isRinging) {
+        bell.pause();
+        bell.currentTime = 0;
+        isRinging = false;
+      }
+    }
+
+    function timeAgo(dateString) {
+      if(!dateString) return '';
+      const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+      let interval = Math.floor(seconds / 60);
+      if (interval < 1) return "Just now";
+      if (interval === 1) return "1 min ago";
+      if (interval < 60) return interval + " mins ago";
+      return Math.floor(interval/60) + " hrs ago";
+    }
+
+    function renderGrid() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      
+      const filtered = ordersCache.filter(o => {
+        // Status filter
+        if(currentFilter === "All" && !["Pending", "Preparing", "Ready"].includes(o.Status)) return false;
+        if(currentFilter !== "All" && o.Status !== currentFilter) return false;
+        
+        // Search filter
+        if(q) {
+          if(!o.TableNo.toString().toLowerCase().includes(q) && !o.OrderID.toLowerCase().includes(q)) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      const grid = document.getElementById('orderGrid');
+      
+      if(filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:3rem; color:var(--text-secondary);">No orders match the current filter.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(o => {
+        let itemsHtml = (o.Items || []).map(i => `
+          <div class="kds-item">
+            <span><span style="color:var(--accent-primary); font-weight:bold; margin-right:0.5rem;">${i.qty}x</span> ${i.name}</span>
+          </div>
+        `).join('');
+        
+        let actionBtn = '';
+        if(o.Status === "Pending") {
+          actionBtn = `<button class="btn-warning" style="width:100%; padding:1.25rem; font-size:1.2rem; border-radius:0.5rem;" onclick="updateStatus('${o.OrderID}', 'Preparing')">Start Preparing</button>`;
+        } else if (o.Status === "Preparing") {
+          actionBtn = `<button class="btn-primary" style="width:100%; padding:1.25rem; font-size:1.2rem; border-radius:0.5rem;" onclick="updateStatus('${o.OrderID}', 'Ready')">Mark Ready</button>`;
+        } else if (o.Status === "Ready") {
+          actionBtn = `<button class="btn-success" style="width:100%; padding:1.25rem; font-size:1.2rem; border-radius:0.5rem;" onclick="updateStatus('${o.OrderID}', 'Completed')">Mark Completed</button>`;
+        }
+        
+        let bColor = o.Status === "Pending" ? "var(--warning)" : o.Status === "Preparing" ? "var(--accent-primary)" : o.Status === "Ready" ? "var(--success)" : "var(--text-secondary)";
+        let isUrgent = o.Status === "Pending" ? "urgent-flash" : "";
+
+        return `
+          <div class="kds-card ${isUrgent}" style="border-top: 4px solid ${bColor};">
+            <div class="card-header">
+              <div>
+                <h3 style="margin:0; font-size:1.8rem;">Table ${o.TableNo}</h3>
+                <p class="text-secondary" style="font-size:0.9rem; margin-top:0.25rem;">ID: ${o.OrderID}</p>
+                <div class="timer">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  ${timeAgo(o.Timestamp)}
+                </div>
+              </div>
+              <span class="badge ${o.Status === 'Pending' ? 'badge-pending' : o.Status === 'Preparing' ? 'badge-cooking' : o.Status === 'Ready' ? 'badge-ready' : ''}" style="font-size:1rem; padding:0.5rem 1rem;">${o.Status}</span>
+            </div>
+            <div class="card-body">
+              ${itemsHtml}
+              ${o.SpecialInstructions ? `<div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); padding:0.75rem; border-radius:0.5rem; color:var(--warning); font-size:0.95rem; margin-top:1rem;"><strong>Notes:</strong> ${o.SpecialInstructions}</div>` : ''}
+              ${o.CustomerName ? `<p class="text-secondary mt-3" style="font-size:0.9rem;">Customer: ${o.CustomerName}</p>` : ''}
+            </div>
+            ${actionBtn ? `<div class="card-footer">${actionBtn}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.updateStatus = async (orderId, status) => {
+      // Optimistic update
+      const idx = ordersCache.findIndex(o => o.OrderID === orderId);
+      if(idx > -1) {
+        ordersCache[idx].Status = status;
+        updateCounts();
+        renderGrid();
+        checkAlarms();
+      }
+      
+      const res = await gasRequest("updateOrder", { restaurantId: rid, orderId: orderId, status: status });
+      if(!res.success) {
+        // Revert on fail
+        fetchOrders();
+        alert("Failed to update order status. Please try again.");
+      }
+    };
+    
+    // Auto-update timers every minute
+    setInterval(() => {
+      if(document.getElementById('mainDisplay').classList.contains('hidden') === false) {
+        renderGrid();
+      }
+    }, 60000);
+
+  </script>
+</body>
+</html>

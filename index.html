@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartDine Lite - The Ultimate QR Ordering SaaS</title>
+  <link rel="stylesheet" href="/src/styles/main.css" />
+  <link rel="stylesheet" href="/src/styles/glassmorphism.css" />
+  <style>
+    .hero {
+      text-align: center;
+      padding: 4rem 1rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(to right, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 2rem;
+    }
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      max-width: 800px;
+      width: 100%;
+    }
+    .portal-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+    .portal-card h3 {
+      margin-bottom: 0.5rem;
+    }
+    .portal-card:hover {
+      color: white;
+    }
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="glass-nav" style="padding: 1rem 2rem; display: flex; justify-content: space-between;">
+    <h2 style="margin:0;">SmartDine Lite</h2>
+    <button class="btn-primary" onclick="showAdminLogin()">Admin Login</button>
+  </div>
+
+  <div class="hero">
+    <h1>Revolutionize Your Restaurant</h1>
+    <p>Seamless QR ordering, real-time kitchen tracking, and lightning-fast waiter calls. All powered by Google Sheets.</p>
+    
+    <div class="portal-grid mt-4">
+      <a href="/owner/" class="glass-card portal-card">
+        <h3>Owner Panel</h3>
+        <p class="text-secondary" style="font-size:0.9rem">Manage menu & sales</p>
+      </a>
+      <a href="/kitchen/" class="glass-card portal-card">
+        <h3>Kitchen App</h3>
+        <p class="text-secondary" style="font-size:0.9rem">Live order screens</p>
+      </a>
+      <a href="/waiter/" class="glass-card portal-card">
+        <h3>Waiter App</h3>
+        <p class="text-secondary" style="font-size:0.9rem">Table notifications</p>
+      </a>
+      <a href="/customer/?restaurantId=DEMO_ID&tableNo=1" class="glass-card portal-card">
+        <h3>Customer Demo</h3>
+        <p class="text-secondary" style="font-size:0.9rem">Scan & Order</p>
+      </a>
+    </div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div id="adminModal" class="modal-overlay hidden">
+    <div class="glass-panel" style="width: 100%; max-width: 400px;">
+      <h2 class="text-center mb-2">Super Admin Login</h2>
+      <input type="text" id="adminUser" placeholder="Username (admin)" />
+      <input type="password" id="adminPass" placeholder="Password (admin123)" />
+      <button class="btn-primary" style="width:100%" onclick="login()">Login</button>
+      <button class="btn-danger mt-1" style="width:100%" onclick="hideAdminLogin()">Cancel</button>
+      <p id="errorMsg" class="mt-1 text-center" style="color:var(--danger); display:none;"></p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { gasRequest } from '/src/api/gas.js';
+
+    window.showAdminLogin = () => {
+      document.getElementById('adminModal').classList.remove('hidden');
+    };
+    
+    window.hideAdminLogin = () => {
+      document.getElementById('adminModal').classList.add('hidden');
+    };
+
+    window.login = async () => {
+      const user = document.getElementById('adminUser').value;
+      const pass = document.getElementById('adminPass').value;
+      const btn = document.querySelector('#adminModal .btn-primary');
+      const err = document.getElementById('errorMsg');
+      
+      btn.innerText = "Loading...";
+      err.style.display = 'none';
+
+      const res = await gasRequest("superAdminLogin", { username: user, password: pass });
+      if (res.success) {
+        localStorage.setItem("superadmin_auth", "true");
+        window.location.href = "/super-admin/";
+      } else {
+        err.innerText = res.message;
+        err.style.display = 'block';
+        btn.innerText = "Login";
+      }
+    };
+  </script>
+</body>
+</html>
