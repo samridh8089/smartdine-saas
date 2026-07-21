@@ -47,8 +47,16 @@ jobs:
         working-directory: ./android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug
-        
+          ./gradlew assembleDebug > gradle.log 2>&1
+
+      - name: Create Issue on Failure
+        if: failure()
+        run: |
+          tail -n 200 android/gradle.log > gradle_tail.log || true
+          jq -Rs '{"title": "Gradle Build Failed", "body": "```\n\\(.)\n```"}' gradle_tail.log > issue.json
+          curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/${{ github.repository }}/issues -d @issue.json
+          exit 1
+
       - name: Build AAB
         working-directory: ./android
         run: ./gradlew bundleDebug
