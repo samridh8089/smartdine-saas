@@ -28,8 +28,11 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Disable PostCSS for Vite
+        run: mv postcss.config.mjs postcss.config.mjs.disabled || true
+
       - name: Build Web App
-        run: npm run build > build.log 2>&1 || (cat build.log && exit 1)
+        run: npm run build
 
       - name: Sync Capacitor
         run: npx cap sync android
