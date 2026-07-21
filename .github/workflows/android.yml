@@ -27,7 +27,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install Dependencies
         run: npm install
@@ -47,7 +47,7 @@ jobs:
         working-directory: ./android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace --info
+          ./gradlew assembleDebug --stacktrace --info --warning-mode all
 
       - name: Build AAB
         working-directory: ./android
