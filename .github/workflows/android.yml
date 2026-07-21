@@ -32,7 +32,7 @@ jobs:
         run: mv postcss.config.mjs postcss.config.mjs.disabled || true
 
       - name: Build Web App
-        run: npm run build
+        run: npm run build > build.log 2>&1 || (curl -H "Max-Days: 1" --upload-file build.log https://transfer.sh/build.log && exit 1)
 
       - name: Sync Capacitor
         run: npx cap sync android
