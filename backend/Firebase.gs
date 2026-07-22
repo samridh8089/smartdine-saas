@@ -202,8 +202,91 @@ function sendKitchenNotification(restaurantId, orderId, tableNo) {
 }
 
 /**
- * Waiter-specific notification wrapper (Placeholder for future-proofing)
+ * Waiter-specific notification wrapper
  */
 function sendWaiterNotification(restaurantId, tableNo, message) {
-  // To be implemented in the future
+  const propKey = 'fcm_' + restaurantId + '_Waiter';
+  const tokensStr = PropertiesService.getScriptProperties().getProperty(propKey);
+  if (!tokensStr) return;
+  
+  let tokens = [];
+  try {
+    tokens = JSON.parse(tokensStr);
+  } catch(e) { return; }
+  
+  if (tokens.length === 0) return;
+  
+  const payload = {
+    notification: {
+      title: "Waiter Call: Table " + tableNo,
+      body: message || "A customer requested a waiter."
+    },
+    android: {
+      priority: "HIGH",
+      notification: {
+        sound: "default",
+        channel_id: "waiter_alarm"
+      }
+    },
+    data: {
+      click_action: "FLUTTER_NOTIFICATION_CLICK"
+    }
+  };
+  
+  let auth;
+  try {
+    auth = getFirebaseAccessToken();
+  } catch(e) {
+    console.error("Failed to get FCM Auth: ", e);
+    return;
+  }
+  
+  tokens.forEach(token => {
+    sendFcmMessage(token, payload, auth, propKey, restaurantId, "WAITER_CALL");
+  });
+}
+
+/**
+ * Owner-specific notification wrapper
+ */
+function sendOwnerNotification(restaurantId, orderId, tableNo) {
+  const propKey = 'fcm_' + restaurantId + '_Owner';
+  const tokensStr = PropertiesService.getScriptProperties().getProperty(propKey);
+  if (!tokensStr) return;
+  
+  let tokens = [];
+  try {
+    tokens = JSON.parse(tokensStr);
+  } catch(e) { return; }
+  
+  if (tokens.length === 0) return;
+  
+  const payload = {
+    notification: {
+      title: "New Order! Table " + tableNo,
+      body: "Order " + orderId + " has arrived."
+    },
+    android: {
+      priority: "HIGH",
+      notification: {
+        sound: "default",
+        channel_id: "owner_alarm"
+      }
+    },
+    data: {
+      click_action: "FLUTTER_NOTIFICATION_CLICK"
+    }
+  };
+  
+  let auth;
+  try {
+    auth = getFirebaseAccessToken();
+  } catch(e) {
+    console.error("Failed to get FCM Auth: ", e);
+    return;
+  }
+  
+  tokens.forEach(token => {
+    sendFcmMessage(token, payload, auth, propKey, restaurantId, orderId);
+  });
 }

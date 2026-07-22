@@ -64,6 +64,11 @@ function callWaiter(params) {
   const timestamp = new Date().toISOString();
   
   sheet.appendRow([callId, tableNo, "Call", "Pending", timestamp]);
+  try {
+    sendWaiterNotification(restaurantId, tableNo, "A customer requested a waiter.");
+  } catch(e) {
+    console.error("Push Error: ", e);
+  }
   return { success: true, message: "Waiter called successfully" };
 }
 
@@ -75,6 +80,11 @@ function requestBill(params) {
   const timestamp = new Date().toISOString();
   
   sheet.appendRow([callId, tableNo, "Bill", "Pending", timestamp]);
+  try {
+    sendWaiterNotification(restaurantId, tableNo, "A customer requested the bill.");
+  } catch(e) {
+    console.error("Push Error: ", e);
+  }
   return { success: true, message: "Bill requested successfully" };
 }
 

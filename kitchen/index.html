@@ -292,8 +292,10 @@
         // Notification received in foreground
         Haptics.vibrate();
         if(!isRinging) {
-          bell.play().catch(()=>{});
           isRinging = true;
+          bell.play().catch(()=>{
+            isRinging = false;
+          });
         }
         fetchOrders();
       });
@@ -389,8 +391,10 @@
       const hasPending = ordersCache.some(o => o.Status === "Pending");
       
       if (hasPending && !isRinging) {
-        bell.play().catch(()=>{});
         isRinging = true;
+        bell.play().catch(()=>{
+          isRinging = false;
+        });
       } else if (!hasPending && isRinging) {
         bell.pause();
         bell.currentTime = 0;

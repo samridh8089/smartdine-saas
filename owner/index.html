@@ -30,6 +30,17 @@
     </div>
   </div>
 
+  <div id="startOverlay" class="modal-overlay hidden" style="z-index: 2000; flex-direction: column; background: rgba(11,17,32,0.9); display:flex; align-items:center; justify-content:center; position:fixed; top:0; left:0; right:0; bottom:0;">
+    <div class="glass-card text-center slide-in-right" style="margin:1rem;">
+      <h2 class="mb-2">Owner Dashboard Ready</h2>
+      <p class="mb-4 text-secondary">Tap below to enable audio alerts for new orders.</p>
+      <button class="btn-primary" style="padding: 1rem 2rem; font-size:1.1rem; width:100%;" onclick="startDisplay()">
+        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+        Enable Audio & Start
+      </button>
+    </div>
+  </div>
+
   <div id="mainDisplay" class="app-layout hidden">
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -425,22 +436,69 @@
     </div>
   </div>
 
+  <audio id="bellSound" src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" preload="auto" loop></audio>
   <div id="toast" class="toast">Success</div>
 
   <script type="module">
     import { gasRequest, startPolling, stopPolling } from '/src/api/gas.js';
+    import { PushNotifications } from '@capacitor/push-notifications';
+    import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
     let rid = localStorage.getItem("owner_rid");
     const urlParams = new URLSearchParams(window.location.search);
     const paramRid = urlParams.get('rid');
+    const bell = document.getElementById('bellSound');
+    let isRinging = false;
 
     if(paramRid) {
       document.getElementById('oRid').value = paramRid;
     }
 
     if (rid) {
-      showMain();
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('startOverlay').classList.remove('hidden');
     }
+
+    window.startDisplay = () => {
+      document.getElementById('startOverlay').classList.add('hidden');
+      bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
+      initPushNotifications();
+      showMain();
+    };
+
+    const initPushNotifications = async () => {
+      let permStatus = await PushNotifications.checkPermissions();
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
+      }
+      if (permStatus.receive !== 'granted') return;
+
+      await PushNotifications.register();
+
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('Push registration success, token: ' + token.value);
+        localStorage.setItem("fcm_token_owner", token.value);
+        if (rid) {
+          await gasRequest("registerFcmToken", { restaurantId: rid, token: token.value, role: "Owner" });
+        }
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+        Haptics.vibrate();
+        if(!isRinging) {
+          isRinging = true;
+          bell.play().catch(()=>{
+            isRinging = false;
+          });
+        }
+        loadDashboard();
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        showMain();
+        loadDashboard();
+      });
+    };
 
     function showToast(msg, isError = false) {
       const t = document.getElementById('toast');
@@ -469,6 +527,8 @@
         if (res && res.success && res.role === "Owner") {
           localStorage.setItem("owner_rid", r);
           rid = r;
+          bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
+          initPushNotifications();
           showMain();
         } else {
           document.getElementById('loginMsg').innerText = (res && res.message) ? res.message : "Invalid credentials";
@@ -561,6 +621,18 @@
         
         if (res.data.length === 0) rows = '<tr><td colspan="5" class="text-center text-secondary">No orders today.</td></tr>';
         tbody.innerHTML = rows;
+
+        // Alarm condition
+        if (pending > 0 && !isRinging) {
+          isRinging = true;
+          bell.play().catch(()=>{
+            isRinging = false;
+          });
+        } else if (pending === 0 && isRinging) {
+          bell.pause();
+          bell.currentTime = 0;
+          isRinging = false;
+        }
       }
     }
 

@@ -10,9 +10,10 @@ function addOrder(params) {
   
   sheet.appendRow([orderId, tableNo, itemsStr, total, "Pending", specialInstructions || "", timestamp]);
   
-  // Try to send push notification to all Kitchen devices
+  // Try to send push notification to all Kitchen and Owner devices
   try {
     sendKitchenNotification(restaurantId, orderId, tableNo);
+    sendOwnerNotification(restaurantId, orderId, tableNo);
   } catch(e) {
     // Fail silently if push fails, order should still be placed
     console.error("Push Error: ", e);
