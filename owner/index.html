@@ -452,20 +452,32 @@
     }
 
     window.login = async () => {
-      const r = document.getElementById('oRid').value;
-      const u = document.getElementById('oUser').value;
-      const p = document.getElementById('oPass').value;
       const btn = document.querySelector('#loginForm button');
-      btn.innerText = "Loading...";
-      
-      const res = await gasRequest("loginStaff", { restaurantId: r, username: u, password: p });
-      if (res.success && res.role === "Owner") {
-        localStorage.setItem("owner_rid", r);
-        rid = r;
-        showMain();
-      } else {
-        document.getElementById('loginMsg').innerText = res.message || "Invalid credentials";
-        btn.innerText = "Sign In";
+      try {
+        const r = document.getElementById('oRid').value;
+        const u = document.getElementById('oUser').value;
+        const p = document.getElementById('oPass').value;
+        btn.innerText = "Loading...";
+        
+        console.log("[Owner Login] Sending request for", r);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000));
+        const res = await Promise.race([
+          gasRequest("loginStaff", { restaurantId: r, username: u, password: p }),
+          timeoutPromise
+        ]);
+        
+        if (res && res.success && res.role === "Owner") {
+          localStorage.setItem("owner_rid", r);
+          rid = r;
+          showMain();
+        } else {
+          document.getElementById('loginMsg').innerText = (res && res.message) ? res.message : "Invalid credentials";
+          btn.innerText = "Sign In";
+        }
+      } catch (e) {
+        console.error("[Owner Login] Error:", e);
+        document.getElementById('loginMsg').innerText = "Login error: " + (e.message || "Unknown error");
+        if(btn) btn.innerText = "Sign In";
       }
     };
 

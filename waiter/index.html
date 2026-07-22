@@ -93,20 +93,32 @@
     };
 
     window.login = async () => {
-      const r = document.getElementById('wRid').value;
-      const p = document.getElementById('wPass').value;
       const btn = document.querySelector('#loginForm button');
-      btn.innerText = "Loading...";
-      
-      const res = await gasRequest("loginStaff", { restaurantId: r, username: "waiter", password: p });
-      if (res.success && res.role === "Waiter") {
-        localStorage.setItem("waiter_rid", r);
-        rid = r;
-        bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
-        showMain();
-      } else {
-        document.getElementById('loginMsg').innerText = "Invalid credentials";
-        btn.innerText = "Login";
+      try {
+        const r = document.getElementById('wRid').value;
+        const p = document.getElementById('wPass').value;
+        btn.innerText = "Loading...";
+        
+        console.log("[Waiter Login] Requesting login for", r);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000));
+        const res = await Promise.race([
+          gasRequest("loginStaff", { restaurantId: r, username: "waiter", password: p }),
+          timeoutPromise
+        ]);
+        
+        if (res && res.success && res.role === "Waiter") {
+          localStorage.setItem("waiter_rid", r);
+          rid = r;
+          bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
+          showMain();
+        } else {
+          document.getElementById('loginMsg').innerText = (res && res.message) ? res.message : "Invalid credentials";
+          btn.innerText = "Login";
+        }
+      } catch (e) {
+        console.error("[Waiter Login] Error:", e);
+        document.getElementById('loginMsg').innerText = "Login error: " + (e.message || "Unknown error");
+        if (btn) btn.innerText = "Login";
       }
     };
 

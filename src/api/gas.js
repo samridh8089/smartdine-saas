@@ -2,25 +2,47 @@ export const GAS_URL = "https://script.google.com/macros/s/AKfycbx6-eBU5-NKIrM0V
 
 export async function gasRequest(action, payload = {}) {
   if (GAS_URL === "MOCK" || GAS_URL.includes("YOUR_SCRIPT_ID")) {
-    console.warn("GAS_URL is not set. Please set your Web App URL in localStorage using localStorage.setItem('GAS_URL', 'your_url_here') or update src/api/gas.js directly.");
+    console.warn("GAS_URL is not set.");
     alert("Backend URL is not configured. Please see the console.");
     return { success: false, message: "Backend URL not configured" };
   }
 
   try {
+    console.log(`[gasRequest] Initiating fetch for action: ${action}`);
+    
+    // Create an AbortController for fetch timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    
     const response = await fetch(GAS_URL, {
       method: "POST",
       headers: {
         "Content-Type": "text/plain;charset=utf-8", // text/plain avoids CORS preflight
       },
-      body: JSON.stringify({ action, ...payload })
+      body: JSON.stringify({ action, ...payload }),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
+    
+    console.log(`[gasRequest] Response status: ${response.status}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+    }
 
     const result = await response.json();
+    console.log(`[gasRequest] Parsed JSON result for ${action}:`, result);
     return result;
   } catch (error) {
-    console.error("GAS Request Error:", error);
-    return { success: false, message: "Network error or backend failure: " + error.message };
+    console.error(`[gasRequest] Error for ${action}:`, error);
+    
+    let errorMsg = error.message;
+    if (error.name === 'AbortError') {
+      errorMsg = "Request timed out after 15 seconds. Please check your internet connection.";
+    }
+    
+    return { success: false, message: "Network error or backend failure: " + errorMsg };
   }
 }
 

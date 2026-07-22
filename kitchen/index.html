@@ -306,20 +306,32 @@
     };
 
     window.login = async () => {
-      const r = document.getElementById('kRid').value;
-      const p = document.getElementById('kPass').value;
       const btn = document.querySelector('#loginForm button');
-      btn.innerText = "Authenticating...";
-      
-      const res = await gasRequest("loginStaff", { restaurantId: r, username: "kitchen", password: p });
-      if (res.success && res.role === "Kitchen") {
-        localStorage.setItem("kitchen_rid", r);
-        rid = r;
-        bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
-        showMain();
-      } else {
-        document.getElementById('loginMsg').innerText = "Invalid credentials or role";
-        btn.innerText = "Authenticate";
+      try {
+        const r = document.getElementById('kRid').value;
+        const p = document.getElementById('kPass').value;
+        btn.innerText = "Authenticating...";
+        
+        console.log("[Kitchen Login] Requesting login for", r);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000));
+        const res = await Promise.race([
+          gasRequest("loginStaff", { restaurantId: r, username: "kitchen", password: p }),
+          timeoutPromise
+        ]);
+        
+        if (res && res.success && res.role === "Kitchen") {
+          localStorage.setItem("kitchen_rid", r);
+          rid = r;
+          bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
+          showMain();
+        } else {
+          document.getElementById('loginMsg').innerText = (res && res.message) ? res.message : "Invalid credentials or role";
+          btn.innerText = "Authenticate";
+        }
+      } catch (e) {
+        console.error("[Kitchen Login] Error:", e);
+        document.getElementById('loginMsg').innerText = "Login error: " + (e.message || "Unknown error");
+        if (btn) btn.innerText = "Authenticate";
       }
     };
 

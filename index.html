@@ -117,22 +117,47 @@
     };
 
     window.login = async () => {
-      const user = document.getElementById('adminUser').value;
-      const pass = document.getElementById('adminPass').value;
       const btn = document.querySelector('#adminModal .btn-primary');
       const err = document.getElementById('errorMsg');
-      
-      btn.innerText = "Loading...";
-      err.style.display = 'none';
+      try {
+        console.log("[Login] Starting login process...");
+        const user = document.getElementById('adminUser').value;
+        const pass = document.getElementById('adminPass').value;
+        
+        btn.innerText = "Loading...";
+        err.style.display = 'none';
 
-      const res = await gasRequest("superAdminLogin", { username: user, password: pass });
-      if (res.success) {
-        localStorage.setItem("superadmin_auth", "true");
-        window.location.href = "/super-admin/";
-      } else {
-        err.innerText = res.message;
-        err.style.display = 'block';
-        btn.innerText = "Login";
+        console.log("[Login] Sending gasRequest to superAdminLogin...");
+        
+        // Timeout handling directly in the login flow as fallback
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Request timed out after 15 seconds")), 15000)
+        );
+        
+        const res = await Promise.race([
+          gasRequest("superAdminLogin", { username: user, password: pass }),
+          timeoutPromise
+        ]);
+        
+        console.log("[Login] Received response:", res);
+
+        if (res && res.success) {
+          console.log("[Login] Success! Redirecting to /super-admin/");
+          localStorage.setItem("superadmin_auth", "true");
+          window.location.href = "/super-admin/";
+        } else {
+          console.log("[Login] Failed:", res ? res.message : "Unknown error");
+          err.innerText = res && res.message ? res.message : "Invalid credentials or backend error.";
+          err.style.display = 'block';
+          btn.innerText = "Login";
+        }
+      } catch (error) {
+        console.error("[Login] Exception caught:", error);
+        if (err) {
+          err.innerText = "Error: " + (error.message || "Unknown error occurred");
+          err.style.display = 'block';
+        }
+        if (btn) btn.innerText = "Login";
       }
     };
   </script>
