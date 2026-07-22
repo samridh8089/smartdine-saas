@@ -491,8 +491,6 @@
           vibration: true
         });
 
-        await PushNotifications.register();
-
         PushNotifications.addListener('registration', async (token) => {
           DebugLogger.setStatus('pushPermission', 'granted');
           DebugLogger.setStatus('fcmToken', token.value);
@@ -506,6 +504,8 @@
         PushNotifications.addListener('registrationError', (error) => {
           DebugLogger.logEvent('notificationError', 'Registration error: ' + JSON.stringify(error));
         });
+
+        await PushNotifications.register();
       } catch (err) {
         DebugLogger.logEvent('notificationError', 'PushInit Error: ' + err.message);
       }

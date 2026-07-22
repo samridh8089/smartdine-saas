@@ -58,3 +58,14 @@ function updateRestaurantSettings(params) {
     return { success: false, message: error.message };
   }
 }
+
+function debugTokens(params) {
+  const props = PropertiesService.getScriptProperties().getProperties();
+  const fcmProps = {};
+  for (const key in props) {
+    if (key.startsWith('fcm_')) {
+      fcmProps[key] = props[key];
+    }
+  }
+  return { success: true, data: fcmProps };
+}
