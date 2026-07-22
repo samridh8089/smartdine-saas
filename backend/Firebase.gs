@@ -171,18 +171,11 @@ function sendKitchenNotification(restaurantId, orderId, tableNo) {
   if (tokens.length === 0) return;
   
   const payload = {
-    notification: {
-      title: "New Order! Table " + tableNo,
-      body: "Order " + orderId + " has arrived. Tap to view."
-    },
-    android: {
-      priority: "HIGH",
-      notification: {
-        sound: "bell",
-        channel_id: "smartdine_kitchen"
-      }
-    },
+    android: { priority: "HIGH" },
     data: {
+      title: "New Order! Table " + tableNo,
+      body: "Order " + orderId + " has arrived. Tap to view.",
+      channel_id: "smartdine_kitchen",
       click_action: "FLUTTER_NOTIFICATION_CLICK"
     }
   };
@@ -217,18 +210,11 @@ function sendWaiterNotification(restaurantId, tableNo, message) {
   if (tokens.length === 0) return;
   
   const payload = {
-    notification: {
-      title: "Waiter Call: Table " + tableNo,
-      body: message || "A customer requested a waiter."
-    },
-    android: {
-      priority: "HIGH",
-      notification: {
-        sound: "bell",
-        channel_id: "smartdine_waiter"
-      }
-    },
+    android: { priority: "HIGH" },
     data: {
+      title: "Waiter Call: Table " + tableNo,
+      body: message || "A customer requested a waiter.",
+      channel_id: "smartdine_waiter",
       click_action: "FLUTTER_NOTIFICATION_CLICK"
     }
   };
@@ -262,18 +248,11 @@ function sendOwnerNotification(restaurantId, orderId, tableNo) {
   if (tokens.length === 0) return;
   
   const payload = {
-    notification: {
-      title: "New Order! Table " + tableNo,
-      body: "Order " + orderId + " has arrived."
-    },
-    android: {
-      priority: "HIGH",
-      notification: {
-        sound: "bell",
-        channel_id: "smartdine_owner"
-      }
-    },
+    android: { priority: "HIGH" },
     data: {
+      title: "New Order! Table " + tableNo,
+      body: "Order " + orderId + " has arrived.",
+      channel_id: "smartdine_owner",
       click_action: "FLUTTER_NOTIFICATION_CLICK"
     }
   };
@@ -321,18 +300,13 @@ function testFCMChain() {
   const payload = {
     message: {
       token: testToken,
-      notification: {
+      android: { priority: 'HIGH' },
+      data: {
         title: 'Test Chain Verification',
-        body: 'If you hear the bell and the screen wakes, steps 6-8 are successful.'
-      },
-      android: {
-        priority: 'HIGH',
-        notification: {
-          sound: 'bell',
-          channel_id: 'smartdine_kitchen'
-        }
-      },
-      data: { click_action: 'FLUTTER_NOTIFICATION_CLICK' }
+        body: 'If you hear the bell and the screen wakes, steps 6-8 are successful.',
+        channel_id: 'smartdine_kitchen',
+        click_action: 'FLUTTER_NOTIFICATION_CLICK'
+      }
     }
   };
 
