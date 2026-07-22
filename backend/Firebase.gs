@@ -133,7 +133,7 @@ function sendFcmMessage(token, payload, auth, propKey, restaurantId, orderId) {
         const resJson = JSON.parse(responseText);
         const errorCode = resJson.error && resJson.error.details && resJson.error.details[0] ? resJson.error.details[0].errorCode : "";
         
-        if (code === 404 || code === 400 || errorCode === "UNREGISTERED" || errorCode === "INVALID_ARGUMENT") {
+        if (code === 404 || code === 400 || errorCode === "UNREGISTERED" || errorCode === "INVALID_ARGUMENT" || errorCode === "SENDER_ID_MISMATCH") {
           // Token is dead, remove it and don't retry
           logPushNotification(restaurantId, orderId, "INVALID_TOKEN", responseText);
           removeInvalidToken(propKey, token);
@@ -161,14 +161,25 @@ function sendFcmMessage(token, payload, auth, propKey, restaurantId, orderId) {
 function sendKitchenNotification(restaurantId, orderId, tableNo) {
   const propKey = 'fcm_' + restaurantId + '_Kitchen';
   const tokensStr = PropertiesService.getScriptProperties().getProperty(propKey);
-  if (!tokensStr) return; // No kitchen devices registered
+  console.log(`[sendKitchenNotification] Attempting to send for ${restaurantId}. Tokens in storage: ${tokensStr}`);
+  
+  if (!tokensStr) {
+    console.log(`[sendKitchenNotification] STOPPING: No tokens found in property ${propKey}`);
+    return;
+  }
   
   let tokens = [];
   try {
     tokens = JSON.parse(tokensStr);
-  } catch(e) { return; }
+  } catch(e) { 
+    console.log(`[sendKitchenNotification] STOPPING: Failed to parse tokens JSON: ${e.message}`);
+    return; 
+  }
   
-  if (tokens.length === 0) return;
+  if (tokens.length === 0) {
+    console.log(`[sendKitchenNotification] STOPPING: Tokens array is empty for ${propKey}`);
+    return;
+  }
   
   const payload = {
     android: { priority: "HIGH" },
@@ -190,6 +201,7 @@ function sendKitchenNotification(restaurantId, orderId, tableNo) {
   
   // Send to all registered devices
   tokens.forEach(token => {
+    console.log(`[sendKitchenNotification] Sending to token: ${token}`);
     sendFcmMessage(token, payload, auth, propKey, restaurantId, orderId);
   });
 }
