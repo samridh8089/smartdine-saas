@@ -312,7 +312,7 @@ function testFCMChain() {
   // You MUST replace this with your actual FCM Token from the Debug Panel
   const testToken = 'REPLACE_WITH_FCM_TOKEN_FROM_DEBUG_PANEL';
   
-  if (testToken === 'REPLACE_WITH_FCM_TOKEN_FROM_DEBUG_PANEL') {
+  if (!testToken || testToken.length < 10 || testToken === 'REPLACE_WITH_FCM_TOKEN_FROM_DEBUG_PANEL') {
     console.error('FAIL STEP 4: You must paste your real FCM token into testFCMChain() to verify device delivery.');
     return;
   }
