@@ -436,7 +436,7 @@
     </div>
   </div>
 
-  <audio id="bellSound" src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" preload="auto" loop></audio>
+  <audio id="bellSound" src="/bell.mp3" preload="auto" loop></audio>
   <div id="toast" class="toast">Success</div>
 
   <script type="module">
@@ -468,23 +468,37 @@
     };
 
     const initPushNotifications = async () => {
-      let permStatus = await PushNotifications.checkPermissions();
-      if (permStatus.receive === 'prompt') {
-        permStatus = await PushNotifications.requestPermissions();
-      }
-      if (permStatus.receive !== 'granted') return;
-
-      await PushNotifications.register();
-
-      PushNotifications.addListener('registration', async (token) => {
-        DebugLogger.setStatus('pushPermission', 'granted');
-        DebugLogger.setStatus('fcmToken', token.value);
-        console.log('Push registration success, token: ' + token.value);
-        localStorage.setItem("fcm_token_owner", token.value);
-        if (rid) {
-          await gasRequest("registerFcmToken", { restaurantId: rid, token: token.value, role: "Owner" });
+      try {
+        let permStatus = await PushNotifications.checkPermissions();
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
         }
-      });
+        
+        DebugLogger.setStatus('pushPermission', permStatus.receive);
+        
+        if (permStatus.receive !== 'granted') {
+          DebugLogger.logEvent('notificationError', 'Push permissions denied.');
+          return;
+        }
+
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', async (token) => {
+          DebugLogger.setStatus('pushPermission', 'granted');
+          DebugLogger.setStatus('fcmToken', token.value);
+          console.log('Push registration success, token: ' + token.value);
+          localStorage.setItem("fcm_token_owner", token.value);
+          if (rid) {
+            await gasRequest("registerFcmToken", { restaurantId: rid, token: token.value, role: "Owner" });
+          }
+        });
+        
+        PushNotifications.addListener('registrationError', (error) => {
+          DebugLogger.logEvent('notificationError', 'Registration error: ' + JSON.stringify(error));
+        });
+      } catch (err) {
+        DebugLogger.logEvent('notificationError', 'PushInit Error: ' + err.message);
+      }
 
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {
         DebugLogger.logEvent('notification', notification);
