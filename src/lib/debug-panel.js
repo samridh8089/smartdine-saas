@@ -123,7 +123,8 @@ class DebugLogger {
       <div id="debug-content"></div>
       <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
         <button id="btn-test-bell" style="background:#333; color:#0f0; border:1px solid #0f0; padding:8px;">Test Bell</button>
-        <button id="btn-test-notif" style="background:#333; color:#0f0; border:1px solid #0f0; padding:8px;">Test FCM</button>
+        <button id="btn-test-fcm-init" style="background:#333; color:#0f0; border:1px solid #0f0; padding:8px;">Init Push</button>
+        <button id="btn-test-fcm" style="background:#333; color:#0f0; border:1px solid #0f0; padding:8px;">Test Notification</button>
         <button id="btn-test-vib" style="background:#333; color:#0f0; border:1px solid #0f0; padding:8px;">Test Vibration</button>
         <button id="btn-test-api" style="background:#333; color:#0f0; border:1px solid #0f0; padding:8px;">Test API</button>
         <button id="btn-copy-report" style="background:#333; color:#0f0; border:1px solid #0f0; padding:8px;">Copy Report</button>
@@ -148,6 +149,23 @@ class DebugLogger {
       }
     });
 
+    document.getElementById('btn-test-fcm-init').addEventListener('click', async () => {
+      this.setStatus('pushPermission', 'testing...');
+      if (typeof window.initPushNotifications === 'function') {
+        try {
+          await window.initPushNotifications();
+        } catch(e) {
+          this.setStatus('lastNotificationError', e.message);
+        }
+      } else {
+        alert("initPushNotifications not found globally");
+      }
+    });
+    
+    document.getElementById('btn-test-fcm').addEventListener('click', async () => {
+      alert("Please trigger a real notification from backend to test.");
+    });
+
     document.getElementById('btn-test-vib').addEventListener('click', () => {
       Haptics.vibrate().catch(e => alert(e.message));
     });
@@ -157,6 +175,14 @@ class DebugLogger {
     });
 
     this.render();
+    
+    // Check audio periodically to see if it loaded
+    setInterval(() => {
+      const bell = document.getElementById('bellSound');
+      if (bell && bell.readyState >= 3) {
+        if (!this.state.audioLoaded) this.setStatus('audioLoaded', true);
+      }
+    }, 1000);
   }
 
   togglePanel() {
