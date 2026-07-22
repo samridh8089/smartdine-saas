@@ -74,19 +74,19 @@
     <p>Seamless QR ordering, real-time kitchen tracking, and lightning-fast waiter calls. All powered by Google Sheets.</p>
     
     <div class="portal-grid mt-4">
-      <a href="/owner/" class="glass-card portal-card">
+      <a href="owner/index.html" class="glass-card portal-card">
         <h3>Owner Panel</h3>
         <p class="text-secondary" style="font-size:0.9rem">Manage menu & sales</p>
       </a>
-      <a href="/kitchen/" class="glass-card portal-card">
+      <a href="kitchen/index.html" class="glass-card portal-card">
         <h3>Kitchen App</h3>
         <p class="text-secondary" style="font-size:0.9rem">Live order screens</p>
       </a>
-      <a href="/waiter/" class="glass-card portal-card">
+      <a href="waiter/index.html" class="glass-card portal-card">
         <h3>Waiter App</h3>
         <p class="text-secondary" style="font-size:0.9rem">Table notifications</p>
       </a>
-      <a href="/customer/?restaurantId=DEMO_ID&tableNo=1" class="glass-card portal-card">
+      <a href="customer/index.html?restaurantId=DEMO_ID&tableNo=1" class="glass-card portal-card">
         <h3>Customer Demo</h3>
         <p class="text-secondary" style="font-size:0.9rem">Scan & Order</p>
       </a>
@@ -142,9 +142,9 @@
         console.log("[Login] Received response:", res);
 
         if (res && res.success) {
-          console.log("[Login] Success! Redirecting to /super-admin/");
+          console.log("[Login] Success! Redirecting to super-admin/index.html");
           localStorage.setItem("superadmin_auth", "true");
-          window.location.href = "/super-admin/";
+          window.location.href = "super-admin/index.html";
         } else {
           console.log("[Login] Failed:", res ? res.message : "Unknown error");
           err.innerText = res && res.message ? res.message : "Invalid credentials or backend error.";
