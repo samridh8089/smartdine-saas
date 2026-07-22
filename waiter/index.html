@@ -111,6 +111,16 @@
           return;
         }
 
+        await PushNotifications.createChannel({
+          id: 'smartdine_waiter',
+          name: 'Waiter Calls',
+          description: 'Used only for waiter calls and bill requests',
+          importance: 5,
+          visibility: 1,
+          sound: 'bell',
+          vibration: true
+        });
+
         await PushNotifications.register();
 
         PushNotifications.addListener('registration', async (token) => {

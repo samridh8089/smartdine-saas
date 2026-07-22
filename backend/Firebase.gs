@@ -178,8 +178,8 @@ function sendKitchenNotification(restaurantId, orderId, tableNo) {
     android: {
       priority: "HIGH",
       notification: {
-        sound: "default",
-        channel_id: "kitchen_alarm"
+        sound: "bell",
+        channel_id: "smartdine_kitchen"
       }
     },
     data: {
@@ -224,8 +224,8 @@ function sendWaiterNotification(restaurantId, tableNo, message) {
     android: {
       priority: "HIGH",
       notification: {
-        sound: "default",
-        channel_id: "waiter_alarm"
+        sound: "bell",
+        channel_id: "smartdine_waiter"
       }
     },
     data: {
@@ -269,8 +269,8 @@ function sendOwnerNotification(restaurantId, orderId, tableNo) {
     android: {
       priority: "HIGH",
       notification: {
-        sound: "default",
-        channel_id: "owner_alarm"
+        sound: "bell",
+        channel_id: "smartdine_owner"
       }
     },
     data: {

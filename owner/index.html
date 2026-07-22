@@ -481,6 +481,16 @@
           return;
         }
 
+        await PushNotifications.createChannel({
+          id: 'smartdine_owner',
+          name: 'Owner Alerts',
+          description: 'Used for owner order notifications',
+          importance: 5,
+          visibility: 1,
+          sound: 'bell',
+          vibration: true
+        });
+
         await PushNotifications.register();
 
         PushNotifications.addListener('registration', async (token) => {

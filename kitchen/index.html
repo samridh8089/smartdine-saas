@@ -286,6 +286,16 @@
           return;
         }
 
+        await PushNotifications.createChannel({
+          id: 'smartdine_kitchen',
+          name: 'Kitchen Orders',
+          description: 'Used only for Kitchen new orders',
+          importance: 5,
+          visibility: 1,
+          sound: 'bell',
+          vibration: true
+        });
+
         await PushNotifications.register();
 
         PushNotifications.addListener('registration', async (token) => {
