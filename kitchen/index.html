@@ -233,9 +233,10 @@
   <audio id="bellSound" src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" preload="auto" loop></audio>
 
   <script type="module">
-    import { gasRequest } from '/src/api/gas.js';
+    import { gasRequest, startPolling, stopPolling } from '/src/api/gas.js';
     import { PushNotifications } from '@capacitor/push-notifications';
     import { Haptics, ImpactStyle } from '@capacitor/haptics';
+    import DebugLogger from '/src/lib/debug-panel.js';
 
     let rid = localStorage.getItem("kitchen_rid");
     const bell = document.getElementById('bellSound');
@@ -281,6 +282,8 @@
       await PushNotifications.register();
 
       PushNotifications.addListener('registration', async (token) => {
+        DebugLogger.setStatus('pushPermission', 'granted');
+        DebugLogger.setStatus('fcmToken', token.value);
         console.log('Push registration success, token: ' + token.value);
         localStorage.setItem("fcm_token", token.value);
         if (rid) {
@@ -290,11 +293,15 @@
 
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {
         // Notification received in foreground
+        DebugLogger.logEvent('notification', notification);
         Haptics.vibrate();
         if(!isRinging) {
           isRinging = true;
-          bell.play().catch(()=>{
+          bell.play().then(() => {
+            DebugLogger.setStatus('audioUnlocked', true);
+          }).catch((e)=>{
             isRinging = false;
+            DebugLogger.logEvent('notificationError', e.message);
           });
         }
         fetchOrders();
@@ -314,7 +321,7 @@
         const p = document.getElementById('kPass').value;
         btn.innerText = "Authenticating...";
         
-        console.log("[Kitchen Login] Requesting login for", r);
+        DebugLogger.logEvent('loginAttempt', { restaurantId: r });
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000));
         const res = await Promise.race([
           gasRequest("loginStaff", { restaurantId: r, username: "kitchen", password: p }),
@@ -322,6 +329,7 @@
         ]);
         
         if (res && res.success && res.role === "Kitchen") {
+          DebugLogger.setStatus('authenticated', true);
           localStorage.setItem("kitchen_rid", r);
           rid = r;
           bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
@@ -331,7 +339,7 @@
           btn.innerText = "Authenticate";
         }
       } catch (e) {
-        console.error("[Kitchen Login] Error:", e);
+        DebugLogger.logEvent('loginError', e.message);
         document.getElementById('loginMsg').innerText = "Login error: " + (e.message || "Unknown error");
         if (btn) btn.innerText = "Authenticate";
       }
@@ -353,12 +361,13 @@
       if(!rid || !navigator.onLine) return;
       
       document.getElementById('syncBadge').style.opacity = '1';
+      DebugLogger.logEvent('apiReq', { url: 'getOrders' });
       
       try {
         const res = await gasRequest("getOrders", { restaurantId: rid, status: "All" });
+        DebugLogger.logEvent('apiRes', res);
         if (res.success) {
-          // Sort orders: oldest Pending first, then Preparing, then Ready, then Completed
-          // We want oldest first so kitchen fulfills in order
+          DebugLogger.setStatus('pollingStatus', 'active');
           ordersCache = res.data; 
           updateCounts();
           renderGrid();
@@ -392,8 +401,11 @@
       
       if (hasPending && !isRinging) {
         isRinging = true;
-        bell.play().catch(()=>{
+        bell.play().then(() => {
+          DebugLogger.setStatus('audioUnlocked', true);
+        }).catch((e)=>{
           isRinging = false;
+          DebugLogger.logEvent('notificationError', e.message);
         });
       } else if (!hasPending && isRinging) {
         bell.pause();

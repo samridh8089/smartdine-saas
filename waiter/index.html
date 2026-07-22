@@ -78,6 +78,7 @@
     import { gasRequest, startPolling } from '/src/api/gas.js';
     import { PushNotifications } from '@capacitor/push-notifications';
     import { Haptics, ImpactStyle } from '@capacitor/haptics';
+    import DebugLogger from '/src/lib/debug-panel.js';
 
     let rid = localStorage.getItem("waiter_rid");
     const bell = document.getElementById('bellSound');
@@ -106,6 +107,8 @@
       await PushNotifications.register();
 
       PushNotifications.addListener('registration', async (token) => {
+        DebugLogger.setStatus('pushPermission', 'granted');
+        DebugLogger.setStatus('fcmToken', token.value);
         console.log('Push registration success, token: ' + token.value);
         localStorage.setItem("fcm_token_waiter", token.value);
         if (rid) {
@@ -114,11 +117,15 @@
       });
 
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+        DebugLogger.logEvent('notification', notification);
         Haptics.vibrate();
         if(!isRinging) {
           isRinging = true;
-          bell.play().catch(()=>{
+          bell.play().then(() => {
+            DebugLogger.setStatus('audioUnlocked', true);
+          }).catch((e)=>{
             isRinging = false;
+            DebugLogger.logEvent('notificationError', e.message);
           });
         }
         fetchAlerts();
@@ -175,10 +182,13 @@
     async function fetchAlerts() {
       if(!rid) return;
       document.getElementById('loading').classList.remove('hidden');
+      DebugLogger.logEvent('apiReq', { url: 'getWaiterCalls, getOrders' });
       const [callsRes, ordersRes] = await Promise.all([
         gasRequest("getWaiterCalls", { restaurantId: rid }),
         gasRequest("getOrders", { restaurantId: rid, status: "All" })
       ]);
+      DebugLogger.logEvent('apiRes', { calls: callsRes.success, orders: ordersRes.success });
+      DebugLogger.setStatus('pollingStatus', 'active');
       document.getElementById('loading').classList.add('hidden');
       
       let alerts = [];
@@ -201,8 +211,11 @@
         currentIds.forEach(id => knownAlerts.add(id));
         if(!isRinging) {
           isRinging = true;
-          bell.play().catch(e => {
+          bell.play().then(() => {
+            DebugLogger.setStatus('audioUnlocked', true);
+          }).catch(e => {
             isRinging = false;
+            DebugLogger.logEvent('notificationError', e.message);
           });
         }
       } else if (alerts.length === 0 && isRinging) {

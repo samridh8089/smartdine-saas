@@ -443,6 +443,7 @@
     import { gasRequest, startPolling, stopPolling } from '/src/api/gas.js';
     import { PushNotifications } from '@capacitor/push-notifications';
     import { Haptics, ImpactStyle } from '@capacitor/haptics';
+    import DebugLogger from '/src/lib/debug-panel.js';
 
     let rid = localStorage.getItem("owner_rid");
     const urlParams = new URLSearchParams(window.location.search);
@@ -476,6 +477,8 @@
       await PushNotifications.register();
 
       PushNotifications.addListener('registration', async (token) => {
+        DebugLogger.setStatus('pushPermission', 'granted');
+        DebugLogger.setStatus('fcmToken', token.value);
         console.log('Push registration success, token: ' + token.value);
         localStorage.setItem("fcm_token_owner", token.value);
         if (rid) {
@@ -484,11 +487,15 @@
       });
 
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+        DebugLogger.logEvent('notification', notification);
         Haptics.vibrate();
         if(!isRinging) {
           isRinging = true;
-          bell.play().catch(()=>{
+          bell.play().then(() => {
+            DebugLogger.setStatus('audioUnlocked', true);
+          }).catch((e)=>{
             isRinging = false;
+            DebugLogger.logEvent('notificationError', e.message);
           });
         }
         loadDashboard();
@@ -582,16 +589,23 @@
     };
 
     async function loadDashboard() {
-      if(!rid) return;
-      const res = await gasRequest("getOrders", { restaurantId: rid, status: "All" });
-      if(res.success && res.data) {
-        const today = new Date().toISOString().split('T')[0];
-        let sales = 0;
-        let count = 0;
-        let pending = 0;
+      if (!rid) return;
+      document.getElementById('loading').classList.remove('hidden');
+      DebugLogger.logEvent('apiReq', { url: 'getOrders' });
+      try {
+        const res = await gasRequest("getOrders", { restaurantId: rid, status: "All" });
+        DebugLogger.logEvent('apiRes', res);
+        document.getElementById('loading').classList.add('hidden');
+        
+        if (res && res.success && res.data) {
+          DebugLogger.setStatus('pollingStatus', 'active');
+          const today = new Date().toISOString().split('T')[0];
+          let sales = 0;
+          let count = 0;
+          let pending = 0;
 
-        const tbody = document.getElementById('ordersList');
-        let rows = '';
+          const tbody = document.getElementById('ordersList');
+          let rows = '';
 
         res.data.forEach(o => {
           if(o.Status === "Pending" || o.Status === "Preparing") pending++;
@@ -625,16 +639,25 @@
         // Alarm condition
         if (pending > 0 && !isRinging) {
           isRinging = true;
-          bell.play().catch(()=>{
+          bell.play().then(() => {
+            DebugLogger.setStatus('audioUnlocked', true);
+          }).catch((e)=>{
             isRinging = false;
+            DebugLogger.logEvent('notificationError', e.message);
           });
         } else if (pending === 0 && isRinging) {
           bell.pause();
           bell.currentTime = 0;
           isRinging = false;
         }
+      } else {
+        DebugLogger.logEvent('apiErr', res.message || 'Unknown');
       }
+    } catch(e) {
+      document.getElementById('loading').classList.add('hidden');
+      DebugLogger.logEvent('apiErr', e.message);
     }
+  }
 
     async function loadMenu() {
       const cacheKey = `owner_menu_${rid}`;
