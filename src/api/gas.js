@@ -1,4 +1,4 @@
-export const GAS_URL = "https://script.google.com/macros/s/AKfycbx6-eBU5-NKIrM0VEUJgTHlEbzkpbFTCo_wlA_Eh7_t6l6A4dwAvC1WthqfJ4oxZ9mA/exec";
+export const GAS_URL = "https://script.google.com/macros/s/AKfycbxDLNRRjUSeMqev084sI20vt0ckA4RtuTWDAXU-8HOC_BwpJ6lK6e7amRBph6oC2rV7/exec";
 
 export async function gasRequest(action, payload = {}) {
   if (GAS_URL === "MOCK" || GAS_URL.includes("YOUR_SCRIPT_ID")) {

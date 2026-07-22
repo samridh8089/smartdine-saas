@@ -1,4 +1,4 @@
-const GAS_URL = "https://script.google.com/macros/s/AKfycbx6-eBU5-NKIrM0VEUJgTHlEbzkpbFTCo_wlA_Eh7_t6l6A4dwAvC1WthqfJ4oxZ9mA/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxDLNRRjUSeMqev084sI20vt0ckA4RtuTWDAXU-8HOC_BwpJ6lK6e7amRBph6oC2rV7/exec";
 
 // Use a test restaurant ID (we will create one if needed, or assume a known one or pass empty to test failures)
 // We will just test createRestaurant first to get an ID.
