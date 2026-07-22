@@ -290,3 +290,78 @@ function sendOwnerNotification(restaurantId, orderId, tableNo) {
     sendFcmMessage(token, payload, auth, propKey, restaurantId, orderId);
   });
 }
+
+/**
+ * Executes a complete, verifiable test of the Notification Chain.
+ * Run this directly from the Apps Script Editor to prove steps 1-5.
+ */
+function testFCMChain() {
+  console.log('=== STARTING FCM CHAIN VERIFICATION ===');
+  
+  // 1. Verify Apps Script Execution & Auth
+  console.log('STEP 1: Generating Google OAuth2 Firebase Token...');
+  let auth;
+  try {
+    auth = getFirebaseAccessToken();
+    console.log('SUCCESS: OAuth2 Token generated. Project ID: ' + auth.projectId);
+  } catch (e) {
+    console.error('FAIL STEP 1: Could not generate OAuth token. Error: ' + e.message);
+    return;
+  }
+  
+  // You MUST replace this with your actual FCM Token from the Debug Panel
+  const testToken = 'REPLACE_WITH_FCM_TOKEN_FROM_DEBUG_PANEL';
+  
+  if (testToken === 'REPLACE_WITH_FCM_TOKEN_FROM_DEBUG_PANEL') {
+    console.error('FAIL STEP 4: You must paste your real FCM token into testFCMChain() to verify device delivery.');
+    return;
+  }
+
+  // Define the exact payload for the Kitchen channel test
+  const payload = {
+    message: {
+      token: testToken,
+      notification: {
+        title: 'Test Chain Verification',
+        body: 'If you hear the bell and the screen wakes, steps 6-8 are successful.'
+      },
+      android: {
+        priority: 'HIGH',
+        notification: {
+          sound: 'bell',
+          channel_id: 'smartdine_kitchen'
+        }
+      },
+      data: { click_action: 'FLUTTER_NOTIFICATION_CLICK' }
+    }
+  };
+
+  console.log('STEP 2: Sending Firebase HTTP POST request with payload: ', JSON.stringify(payload));
+  
+  const url = 'https://fcm.googleapis.com/v1/projects/' + auth.projectId + '/messages:send';
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'Authorization': 'Bearer ' + auth.token },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const code = response.getResponseCode();
+    const text = response.getContentText();
+    
+    if (code === 200) {
+      console.log('STEP 3 & 4 & 5: Firebase returned SUCCESS! HTTP 200.');
+      console.log('EXACT FIREBASE RESPONSE: ' + text);
+      console.log('Now check your locked device for Steps 6, 7, and 8.');
+    } else {
+      console.error('FAIL STEP 2/3: Firebase returned HTTP ' + code);
+      console.error('EXACT FIREBASE ERROR RESPONSE: ' + text);
+    }
+  } catch(e) {
+    console.error('FAIL STEP 2: HTTP Request failed before reaching Firebase. Error: ' + e.message);
+  }
+  console.log('=== END FCM CHAIN VERIFICATION ===');
+}
