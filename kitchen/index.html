@@ -274,15 +274,25 @@
 
     const initPushNotifications = async () => {
       try {
+        // Check if plugin is actually available natively
+        const { Capacitor } = await import('@capacitor/core');
+        if (!Capacitor.isPluginAvailable('PushNotifications')) {
+          DebugLogger.setStatus('pushPermission', 'plugin_missing');
+          DebugLogger.logEvent('notificationError', 'PushNotifications plugin is not available. Native bridge missing?');
+          return;
+        }
+
+        DebugLogger.setStatus('pushPermission', 'checking...');
         let permStatus = await PushNotifications.checkPermissions();
-        if (permStatus.receive === 'prompt') {
+        
+        if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
           permStatus = await PushNotifications.requestPermissions();
         }
         
         DebugLogger.setStatus('pushPermission', permStatus.receive);
         
         if (permStatus.receive !== 'granted') {
-          DebugLogger.logEvent('notificationError', 'Push permissions denied.');
+          DebugLogger.logEvent('notificationError', 'Push permissions denied by user or OS.');
           return;
         }
 
@@ -307,12 +317,15 @@
         });
         
         PushNotifications.addListener('registrationError', (error) => {
+          DebugLogger.setStatus('pushPermission', 'reg_error');
           DebugLogger.logEvent('notificationError', 'Registration error: ' + JSON.stringify(error));
         });
 
         await PushNotifications.register();
       } catch(err) {
+        DebugLogger.setStatus('pushPermission', 'crashed');
         DebugLogger.logEvent('notificationError', 'PushInit Error: ' + err.message);
+        console.error("PushInit Error:", err);
       }
 
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {
