@@ -9,6 +9,12 @@ export async function gasRequest(action, payload = {}) {
 
   try {
     console.log(`[gasRequest] Initiating fetch for action: ${action}`);
+    console.log(`[gasRequest] Target URL: ${GAS_URL}`);
+    console.log(`[gasRequest] HTTP Method: POST`);
+    console.log(`[gasRequest] Headers: {"Content-Type": "text/plain;charset=utf-8"}`);
+    console.log(`[gasRequest] Payload:`, JSON.stringify({ action, ...payload }, null, 2));
+    
+    const startTime = performance.now();
     
     // Create an AbortController for fetch timeout
     const controller = new AbortController();
@@ -24,8 +30,10 @@ export async function gasRequest(action, payload = {}) {
     });
     
     clearTimeout(timeoutId);
+    const endTime = performance.now();
     
     console.log(`[gasRequest] Response status: ${response.status}`);
+    console.log(`[gasRequest] Response time: ${(endTime - startTime).toFixed(2)}ms`);
     
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);

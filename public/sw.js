@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartdine-lite-v1';
+const CACHE_NAME = 'smartdine-lite-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -12,6 +12,8 @@ const urlsToCache = [
   '/src/api/gas.js',
   'https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3'
 ];
+
+
 
 self.addEventListener('install', event => {
   event.waitUntil(

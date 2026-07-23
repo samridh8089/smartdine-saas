@@ -238,7 +238,7 @@
   <div id="toast" class="toast">Success</div>
 
   <script type="module">
-    import { gasRequest, startPolling, stopPolling } from '/src/api/gas.js';
+    import { gasRequest, startPolling, stopPolling } from '/src/api/gas.js?v=2';
 
     const urlParams = new URLSearchParams(window.location.search);
     const rid = urlParams.get('restaurantId');
@@ -426,7 +426,19 @@
         specialInstructions: instructions
       };
 
+      console.log("[Customer App] Attempting to place order");
+      console.log(`[Customer App] Request URL: (via gasRequest to GAS_URL in gas.js)`);
+      console.log(`[Customer App] HTTP Method: POST`);
+      console.log(`[Customer App] Request Payload:`, JSON.stringify(payload, null, 2));
+
+      const startTime = performance.now();
       const res = await gasRequest("addOrder", payload);
+      const endTime = performance.now();
+      
+      console.log(`[Customer App] Response Status: ${res.success ? '200 OK (simulated)' : 'Error'}`);
+      console.log(`[Customer App] Response Body:`, JSON.stringify(res, null, 2));
+      console.log(`[Customer App] Response Time: ${(endTime - startTime).toFixed(2)}ms`);
+
       if(res.success) {
         currentOrderId = res.orderId;
         hideCart();
