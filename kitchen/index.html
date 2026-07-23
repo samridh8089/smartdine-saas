@@ -307,12 +307,18 @@
         });
 
         PushNotifications.addListener('registration', async (token) => {
+          console.log(`[Token Lifecycle] Token received from Firebase: ${token.value}`);
+          
           DebugLogger.setStatus('pushPermission', 'granted');
           DebugLogger.setStatus('fcmToken', token.value);
-          console.log('Push registration success, token: ' + token.value);
+          console.log(`[Token Lifecycle] Token dispatched to Debug Panel.`);
+          
           localStorage.setItem("fcm_token", token.value);
+          console.log(`[Token Lifecycle] Token saved to localStorage.`);
+          
           if (rid) {
             await gasRequest("registerFcmToken", { restaurantId: rid, token: token.value, role: "Kitchen" });
+            console.log(`[Token Lifecycle] Token dispatched to Apps Script backend.`);
           }
         });
         
@@ -321,6 +327,7 @@
           DebugLogger.logEvent('notificationError', 'Registration error: ' + JSON.stringify(error));
         });
 
+        console.log("[Token Lifecycle] Capacitor requesting Firebase token...");
         await PushNotifications.register();
       } catch(err) {
         DebugLogger.setStatus('pushPermission', 'crashed');
@@ -383,7 +390,17 @@
       }
     };
 
-    window.logout = () => {
+    window.logout = async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isPluginAvailable('PushNotifications')) {
+          await PushNotifications.unregister();
+          console.log("[Token Lifecycle] Capacitor successfully unregistered from Firebase on logout.");
+        }
+      } catch (e) {
+        console.error("Failed to unregister push notifications during logout", e);
+      }
+      localStorage.removeItem("fcm_token");
       localStorage.removeItem("kitchen_rid");
       window.location.reload();
     };
