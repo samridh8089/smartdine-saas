@@ -118,6 +118,9 @@ function handleRequest(e, method) {
       case "registerFcmToken":
         result = registerFcmToken(params);
         break;
+      case "unregisterFcmToken":
+        result = unregisterFcmToken(params);
+        break;
       case "debugTokens":
         result = debugTokens(params);
         break;

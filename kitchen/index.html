@@ -391,6 +391,17 @@
     };
 
     window.logout = async () => {
+      const storedToken = localStorage.getItem("fcm_token");
+      if (rid && storedToken) {
+        try {
+          console.log("[Token Lifecycle] Sending unregister request to Apps Script backend...");
+          await gasRequest("unregisterFcmToken", { restaurantId: rid, token: storedToken, role: "Kitchen" });
+          console.log("[Token Lifecycle] Backend token unregistration successful.");
+        } catch (err) {
+          console.error("Failed to unregister from backend", err);
+        }
+      }
+
       try {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.isPluginAvailable('PushNotifications')) {
@@ -400,6 +411,7 @@
       } catch (e) {
         console.error("Failed to unregister push notifications during logout", e);
       }
+      
       localStorage.removeItem("fcm_token");
       localStorage.removeItem("kitchen_rid");
       window.location.reload();

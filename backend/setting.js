@@ -34,6 +34,28 @@ function registerFcmToken(params) {
   return { success: true, message: 'FCM Token registered' };
 }
 
+function unregisterFcmToken(params) {
+  const { restaurantId, token, role } = params;
+  if (!restaurantId || !token || !role) return { success: false, message: 'Missing parameters' };
+  
+  const propKey = 'fcm_' + restaurantId + '_' + role;
+  const props = PropertiesService.getScriptProperties();
+  
+  let tokens = [];
+  try {
+    const existing = props.getProperty(propKey);
+    if (existing) tokens = JSON.parse(existing);
+  } catch(e) {}
+  
+  const index = tokens.indexOf(token);
+  if (index !== -1) {
+    tokens.splice(index, 1);
+    props.setProperty(propKey, JSON.stringify(tokens));
+  }
+  
+  return { success: true, message: 'FCM Token unregistered' };
+}
+
 function updateRestaurantSettings(params) {
   const { restaurantId, settings } = params;
   try {
