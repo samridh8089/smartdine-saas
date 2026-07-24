@@ -248,10 +248,14 @@
     // Online/Offline Listeners
     window.addEventListener('online', () => document.getElementById('offlineBanner').style.display = 'none');
     window.addEventListener('offline', () => document.getElementById('offlineBanner').style.display = 'block');
+    
+    let isPushInitialized = false;
 
     if (rid) {
       document.getElementById('loginForm').classList.add('hidden');
       document.getElementById('startOverlay').classList.remove('hidden');
+      // Initialize push immediately instead of waiting for Launch KDS
+      initPushNotifications();
     }
 
     // Filter Listeners
@@ -268,11 +272,12 @@
       document.getElementById('startOverlay').classList.add('hidden');
       // Unlock audio
       bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
-      initPushNotifications();
       showMain();
     };
 
     const initPushNotifications = async () => {
+      if (isPushInitialized) return;
+      isPushInitialized = true;
       try {
         // Check if plugin is actually available natively
         const { Capacitor } = await import('@capacitor/core');
@@ -378,6 +383,7 @@
           localStorage.setItem("kitchen_rid", r);
           rid = r;
           bell.play().then(() => { bell.pause(); bell.currentTime = 0; }).catch(()=>{});
+          initPushNotifications();
           showMain();
         } else {
           document.getElementById('loginMsg').innerText = (res && res.message) ? res.message : "Invalid credentials or role";
