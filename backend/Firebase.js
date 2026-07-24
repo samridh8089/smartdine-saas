@@ -115,6 +115,10 @@ function sendFcmMessage(token, payload, auth, propKey, restaurantId, orderId) {
     }
   };
 
+  const maskedToken = token && token.length > 8 ? '*'.repeat(token.length - 8) + token.slice(-8) : String(token);
+  console.log(`[FCM_DEBUG] Sending FCM HTTP request for token: ${maskedToken}`);
+  console.log(`[FCM_DEBUG] Request Payload:`, JSON.stringify(finalPayload));
+
   const options = {
     method: 'post',
     contentType: 'application/json',
@@ -134,8 +138,12 @@ function sendFcmMessage(token, payload, auth, propKey, restaurantId, orderId) {
       const code = response.getResponseCode();
       const responseText = response.getContentText();
       
+      console.log(`[FCM_DEBUG] Firebase HTTP Response Status: ${code}`);
+      console.log(`[FCM_DEBUG] Firebase HTTP Response Body: ${responseText}`);
+      
       if (code === 200) {
         success = true;
+        console.log(`[FCM_DEBUG] SUCCESS for token: ${maskedToken}`);
         logPushNotification(restaurantId, orderId, "SUCCESS", responseText);
       } else {
         const resJson = JSON.parse(responseText);
@@ -143,6 +151,7 @@ function sendFcmMessage(token, payload, auth, propKey, restaurantId, orderId) {
         
         if (code === 404 || code === 400 || errorCode === "UNREGISTERED" || errorCode === "INVALID_ARGUMENT" || errorCode === "SENDER_ID_MISMATCH") {
           // Token is dead, remove it and don't retry
+          console.log(`[FCM_DEBUG] FAILED for token: ${maskedToken}. Removing invalid token.`);
           logPushNotification(restaurantId, orderId, "INVALID_TOKEN", responseText);
           removeInvalidToken(propKey, token);
           break;
@@ -183,6 +192,15 @@ function sendKitchenNotification(restaurantId, orderId, tableNo) {
     PropertiesService.getScriptProperties().setProperty('LAST_PUSH_LOG', JSON.stringify({ error: 'Failed to parse tokens JSON', message: e.message }));
     return; 
   }
+  
+  console.log(`[FCM_DEBUG] sendKitchenNotification called.`);
+  console.log(`[FCM_DEBUG] Restaurant ID: ${restaurantId}`);
+  console.log(`[FCM_DEBUG] Raw Tokens String: ${tokensStr}`);
+  console.log(`[FCM_DEBUG] Number of tokens found: ${tokens.length}`);
+  tokens.forEach(t => {
+    const mt = t && t.length > 8 ? '*'.repeat(t.length-8) + t.slice(-8) : String(t);
+    console.log(`[FCM_DEBUG] Token found: ${mt}`);
+  });
   
   if (tokens.length === 0) {
     PropertiesService.getScriptProperties().setProperty('LAST_PUSH_LOG', JSON.stringify({ error: 'Tokens array is empty', propKey }));

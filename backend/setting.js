@@ -31,6 +31,9 @@ function registerFcmToken(params) {
     props.setProperty(propKey, JSON.stringify(tokens));
   }
   
+  const maskedToken = token && token.length > 8 ? '*'.repeat(token.length - 8) + token.slice(-8) : String(token);
+  console.log(`[FCM_DEBUG] registerFcmToken called. RestaurantId: ${restaurantId}, Role: ${role}, Token: ${maskedToken}, Total tokens after save: ${tokens.length}`);
+  
   return { success: true, message: 'FCM Token registered' };
 }
 
@@ -52,6 +55,9 @@ function unregisterFcmToken(params) {
     tokens.splice(index, 1);
     props.setProperty(propKey, JSON.stringify(tokens));
   }
+  
+  const maskedToken = token && token.length > 8 ? '*'.repeat(token.length - 8) + token.slice(-8) : String(token);
+  console.log(`[FCM_DEBUG] unregisterFcmToken called. RestaurantId: ${restaurantId}, Role: ${role}, Token: ${maskedToken}, Total tokens after remove: ${tokens.length}`);
   
   return { success: true, message: 'FCM Token unregistered' };
 }
